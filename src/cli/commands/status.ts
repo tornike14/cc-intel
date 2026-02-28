@@ -49,15 +49,18 @@ export function createStatusCommand(): Command {
         return;
       }
 
-      process.stdout.write(`MEMORY.md Status: ${memoryPath}\n`);
+      process.stdout.write('\n');
+      process.stdout.write(`  MEMORY.md Status\n`);
+      process.stdout.write('  ' + '-'.repeat(50) + '\n');
+      process.stdout.write(`  Path: ${memoryPath}\n`);
       process.stdout.write(
-        `Total: ${status.totalLines}/${status.maxLines} lines (${status.utilizationPercent}%)\n\n`,
+        `  Total: ${status.totalLines}/${status.maxLines} lines (${status.utilizationPercent}%)\n\n`,
       );
 
       for (const section of status.sections) {
         const bar = makeBar(section.percent / 100);
         process.stdout.write(
-          `  ${section.name}: ${section.lines}/${section.limit} ${bar} ${section.percent}%\n`,
+          `    ${section.name}: ${section.lines}/${section.limit} ${bar} ${section.percent}%\n`,
         );
       }
       process.stdout.write('\n');

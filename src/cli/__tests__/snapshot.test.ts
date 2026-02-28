@@ -38,9 +38,9 @@ describe('formatSnapshotAsMarkdown', () => {
     expect(output).toContain('Use TypeScript');
   });
 
-  it('shows _No entries_ for empty sections', () => {
+  it('shows (no entries) for empty sections', () => {
     const output = formatSnapshotAsMarkdown(makeSnapshot());
-    expect(output).toContain('_No entries_');
+    expect(output).toContain('(no entries)');
   });
 
   it('includes metadata', () => {
