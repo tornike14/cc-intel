@@ -30,14 +30,23 @@ export function classifyRisk(
   return RiskLevel.Low;
 }
 
+/**
+ * Assess context window usage and compaction risk.
+ *
+ * @param reservedTokens — tokens reserved for system prompt, MEMORY.md, and
+ *   Claude Code framing overhead. Subtracted from maxContext before calculating
+ *   utilization so the risk score reflects usable capacity, not raw limit.
+ */
 export function assessRisk(
   messages: SessionMessage[],
   maxContext = 200_000,
   thresholds: RiskThresholds = DEFAULT_RISK_THRESHOLDS,
+  reservedTokens = 5_000,
 ): ContextMetrics {
   const totalText = messages.map((m) => m.content).join('\n');
   const tokenEstimate = estimateTokens(totalText);
-  const utilizationPercent = tokenEstimate / maxContext;
+  const effectiveMax = Math.max(1, maxContext - reservedTokens);
+  const utilizationPercent = tokenEstimate / effectiveMax;
   const riskLevel = classifyRisk(utilizationPercent, thresholds);
 
   return {

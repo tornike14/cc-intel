@@ -30,7 +30,9 @@ All notable changes to this project will be documented in this file.
 - Budget enforcement infinite loop when `totalLines - maxLines = 1`
 - Duplicate overflow filenames when same section overflows multiple times on same date
 - Overflow filename collision between section-limit and global trimming passes
+- Overflow files now use timestamps (not just dates) so multiple preserve runs per day don't overwrite each other
 - Snapshot command continuing to emit output after session discovery failure
+- Risk assessment now reserves 5,000 tokens for system prompt and MEMORY.md overhead, giving more accurate utilization
 - Windows path encoding for drive letters (e.g., `C:\Users\foo` encodes correctly)
 
 ## [0.1.0] - 2026-02-28
