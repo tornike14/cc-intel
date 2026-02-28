@@ -54,7 +54,10 @@ async function resolveInput(file?: string, inputFlag?: string): Promise<string> 
 
   if (process.stdin.isTTY) {
     process.stderr.write(
-      'Error: no session file found. Provide a file path or pipe input via stdin.\n',
+      'No Claude Code sessions found for this project.\n' +
+        'Run from inside a project directory, or use:\n' +
+        '  cc-intel projects          # pick a project interactively\n' +
+        '  cc-intel snapshot <file>   # provide a session file directly\n',
     );
     process.exitCode = 1;
     return '';

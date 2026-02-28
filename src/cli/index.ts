@@ -4,6 +4,7 @@ import { createSnapshotCommand } from './commands/snapshot.js';
 import { createRiskCommand } from './commands/risk.js';
 import { createPreserveCommand } from './commands/preserve.js';
 import { createStatusCommand } from './commands/status.js';
+import { createProjectsCommand } from './commands/projects.js';
 import { HELP_HEADER, HELP_FOOTER } from './branding.js';
 
 const config = await loadConfig();
@@ -19,5 +20,6 @@ program.addCommand(createSnapshotCommand());
 program.addCommand(createRiskCommand(config));
 program.addCommand(createPreserveCommand(config));
 program.addCommand(createStatusCommand());
+program.addCommand(createProjectsCommand(config));
 
 program.parse();
