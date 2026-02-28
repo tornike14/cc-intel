@@ -7,7 +7,7 @@ import { formatRiskAsMarkdown, formatRiskAsJson } from '../formatters/risk-forma
 
 export function createRiskCommand(): Command {
   return new Command('risk')
-    .description('Assess context usage and compaction risk')
+    .description('Assess context window usage and compaction risk')
     .option('-i, --input <path>', 'Session file path (default: stdin)')
     .option('-f, --format <fmt>', 'Input format: auto, jsonl, markdown', 'auto')
     .option('--json', 'Output as JSON')
