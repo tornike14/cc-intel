@@ -1,1 +1,2 @@
-// Core engines — populated in subsequent feature branches
+export * from './signal-patterns.js';
+export * from './signals.js';
