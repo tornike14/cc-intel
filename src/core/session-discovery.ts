@@ -7,11 +7,28 @@ import { createLogger } from '../utils/logger.js';
 const logger = createLogger('session-discovery');
 
 /**
+ * Convert a filesystem path to the Claude projects directory name.
+ *
+ * Claude Code encodes project paths by replacing path separators with hyphens.
+ * On Windows, the colon after the drive letter is also removed:
+ *   /Users/foo/bar      → -Users-foo-bar
+ *   C:\Users\foo\bar    → C--Users-foo-bar
+ *
+ * @internal Exported for testing only.
+ */
+export function encodeProjectPath(projectRoot: string): string {
+  // Replace Windows drive colon with hyphen (C:\... → C-\...)
+  // Then replace both forward and back slashes with hyphens
+  // Result: C:\Users\foo → C-\Users\foo → C--Users-foo
+  return projectRoot.replace(/^([A-Za-z]):/, '$1-').replace(/[\\/]/g, '-');
+}
+
+/**
  * Discover the most recent Claude Code session file for the current project.
  *
  * Resolution:
  * 1. Find git repo root (or fall back to cwd)
- * 2. Convert path to Claude projects directory name (/ → -)
+ * 2. Convert path to Claude projects directory name
  * 3. Find *.jsonl files in ~/.claude/projects/<dir>/
  * 4. Return the most recently modified one
  */
@@ -27,7 +44,7 @@ export async function discoverLatestSession(cwd?: string): Promise<string | null
   }
 
   // Convert path to Claude projects directory name
-  const dirName = projectRoot.replace(/\//g, '-');
+  const dirName = encodeProjectPath(projectRoot);
   const projectsDir = path.join(os.homedir(), '.claude', 'projects', dirName);
 
   try {
