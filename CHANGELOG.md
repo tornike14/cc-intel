@@ -33,6 +33,10 @@ All notable changes to this project will be documented in this file.
 - Overflow files now use timestamps (not just dates) so multiple preserve runs per day don't overwrite each other
 - Snapshot command continuing to emit output after session discovery failure
 - Risk assessment now reserves 5,000 tokens for system prompt and MEMORY.md overhead, giving more accurate utilization
+- MEMORY.md path now defaults to project-specific location (`~/.claude/projects/<dir>/memory/MEMORY.md`) instead of non-existent global `~/.claude/MEMORY.md`
+- `projects` command preserve case now writes to the selected project's memory directory
+- Standardized home directory resolution on `os.homedir()` across all CLI commands
+- Entry truncation increased from 150 to 500 characters with ellipsis indicator
 - Windows path encoding for drive letters (e.g., `C:\Users\foo` encodes correctly)
 
 ## [0.1.0] - 2026-02-28

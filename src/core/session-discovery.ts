@@ -225,6 +225,56 @@ export async function discoverLatestSession(cwd?: string): Promise<string | null
 }
 
 // ---------------------------------------------------------------------------
+// Memory path resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Discover the project-specific MEMORY.md path for the current working directory.
+ *
+ * Claude Code stores project memory at:
+ *   ~/.claude/projects/<encoded-path>/memory/MEMORY.md
+ *
+ * Returns null if the memory file doesn't exist on disk.
+ */
+export async function discoverProjectMemoryPath(cwd?: string): Promise<string | null> {
+  const workDir = cwd ?? process.cwd();
+
+  let projectRoot: string;
+  try {
+    projectRoot = await getGitRoot(workDir);
+  } catch {
+    projectRoot = workDir;
+  }
+
+  const dirName = encodeProjectPath(projectRoot);
+  const memoryPath = path.join(
+    os.homedir(),
+    '.claude',
+    'projects',
+    dirName,
+    'memory',
+    'MEMORY.md',
+  );
+
+  try {
+    await fs.access(memoryPath);
+    return memoryPath;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Derive the MEMORY.md path from a discovered session file path.
+ *
+ * Session files live at ~/.claude/projects/<dir>/<uuid>.jsonl,
+ * so the memory path is ~/.claude/projects/<dir>/memory/MEMORY.md.
+ */
+export function memoryPathFromSession(sessionPath: string): string {
+  return path.join(path.dirname(sessionPath), 'memory', 'MEMORY.md');
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 

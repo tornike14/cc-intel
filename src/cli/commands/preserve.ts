@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import { DEFAULT_MEMORY_BUDGET, type CcIntelConfig } from '../../models/index.js';
 import { parseSession } from '../../core/session-parser.js';
@@ -8,7 +9,11 @@ import { extractSnapshot } from '../../core/snapshot.js';
 import { parseMemoryDocument } from '../../core/memory-parser.js';
 import { serializeMemoryDocument } from '../../core/memory-serializer.js';
 import { mergeIntoMemory } from '../../core/memory-merger.js';
-import { discoverLatestSession } from '../../core/session-discovery.js';
+import {
+  discoverLatestSession,
+  discoverProjectMemoryPath,
+  memoryPathFromSession,
+} from '../../core/session-discovery.js';
 import { safeWriteFile, safeReadFile, ensureDir } from '../../utils/safe-fs.js';
 import { createLogger } from '../../utils/logger.js';
 
@@ -22,7 +27,7 @@ export function createPreserveCommand(config?: CcIntelConfig): Command {
     .argument('[file]', 'Session file (default: latest from current project)')
     .option('-i, --input <path>', 'Session file path')
     .option('-f, --format <fmt>', 'Input format: auto, jsonl, markdown', 'auto')
-    .option('-m, --memory <path>', 'MEMORY.md path', resolveDefaultMemoryPath())
+    .option('-m, --memory <path>', 'MEMORY.md path (default: project-specific)')
     .option('--dry-run', 'Preview changes without writing')
     .option('--max-lines <n>', 'Max MEMORY.md lines', defaultMaxLines)
     .action(
@@ -31,34 +36,40 @@ export function createPreserveCommand(config?: CcIntelConfig): Command {
         options: {
           input?: string;
           format: string;
-          memory: string;
+          memory?: string;
           dryRun?: boolean;
           maxLines: string;
         },
       ) => {
         // 1. Read session input
-        const input = await resolveInput(file, options.input);
-        if (!input) return;
+        const resolved = await resolveInput(file, options.input);
+        if (!resolved.content) return;
 
         // 2. Parse and extract snapshot
-        const session = parseSession(input, options.format as 'auto' | 'jsonl' | 'markdown');
+        const session = parseSession(
+          resolved.content,
+          options.format as 'auto' | 'jsonl' | 'markdown',
+        );
         const segmented = segmentSession(session.messages);
         const snapshot = extractSnapshot(segmented);
 
-        // 3. Read existing MEMORY.md (or create empty)
+        // 3. Resolve MEMORY.md path: explicit flag > session-derived > project discovery > global
+        const memoryPath = await resolveMemoryPath(options.memory, resolved.sessionPath);
+
+        // 4. Read existing MEMORY.md (or create empty)
         let existingContent = '';
         let existingMtime: number | undefined;
         try {
-          const fileSnapshot = await safeReadFile(options.memory);
+          const fileSnapshot = await safeReadFile(memoryPath);
           existingContent = fileSnapshot.content;
           existingMtime = fileSnapshot.mtime;
         } catch {
-          logger.info(`No existing MEMORY.md at ${options.memory}, will create new`);
+          logger.info(`No existing MEMORY.md at ${memoryPath}, will create new`);
         }
 
         const existingDoc = parseMemoryDocument(existingContent);
 
-        // 4. Merge
+        // 5. Merge
         const maxLines = parseInt(options.maxLines, 10);
         const baseBudget = config?.memoryBudget ?? DEFAULT_MEMORY_BUDGET;
         const budget = {
@@ -71,7 +82,7 @@ export function createPreserveCommand(config?: CcIntelConfig): Command {
           budget,
         );
 
-        // 5. Output results
+        // 6. Output results
         const serialized = serializeMemoryDocument(updatedDoc);
 
         if (options.dryRun) {
@@ -85,13 +96,14 @@ export function createPreserveCommand(config?: CcIntelConfig): Command {
           return;
         }
 
-        // 6. Write MEMORY.md
-        await safeWriteFile(options.memory, serialized, existingMtime);
-        logger.info(`Updated ${options.memory}`);
+        // 7. Write MEMORY.md
+        await ensureDir(path.dirname(memoryPath));
+        await safeWriteFile(memoryPath, serialized, existingMtime);
+        logger.info(`Updated ${memoryPath}`);
 
-        // 7. Handle overflow
+        // 8. Handle overflow
         if (overflowActions.length > 0) {
-          const memoryDir = path.dirname(options.memory);
+          const memoryDir = path.dirname(memoryPath);
           for (const action of overflowActions) {
             const overflowPath = path.join(memoryDir, action.topicFileLink);
             await ensureDir(memoryDir);
@@ -100,8 +112,8 @@ export function createPreserveCommand(config?: CcIntelConfig): Command {
           }
         }
 
-        // 8. Report
-        process.stdout.write(`Preserved ${entriesAdded} entries to ${options.memory}\n`);
+        // 9. Report
+        process.stdout.write(`Preserved ${entriesAdded} entries to ${memoryPath}\n`);
         if (entriesDeduplicated > 0) {
           process.stdout.write(`Deduplicated ${entriesDeduplicated} entries\n`);
         }
@@ -112,19 +124,19 @@ export function createPreserveCommand(config?: CcIntelConfig): Command {
     );
 }
 
-function resolveDefaultMemoryPath(): string {
-  const home = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '.';
-  return path.join(home, '.claude', 'MEMORY.md');
+interface ResolvedInput {
+  content: string;
+  sessionPath?: string;
 }
 
-async function resolveInput(file?: string, inputFlag?: string): Promise<string> {
+async function resolveInput(file?: string, inputFlag?: string): Promise<ResolvedInput> {
   const filePath = file ?? inputFlag;
-  if (filePath) return fs.readFile(filePath, 'utf-8');
+  if (filePath) return { content: await fs.readFile(filePath, 'utf-8') };
 
   const discovered = await discoverLatestSession();
   if (discovered) {
     process.stderr.write(`Using session: ${discovered}\n`);
-    return fs.readFile(discovered, 'utf-8');
+    return { content: await fs.readFile(discovered, 'utf-8'), sessionPath: discovered };
   }
 
   if (process.stdin.isTTY) {
@@ -135,10 +147,28 @@ async function resolveInput(file?: string, inputFlag?: string): Promise<string> 
         '  cc-intel preserve <file>   # provide a session file directly\n',
     );
     process.exitCode = 1;
-    return '';
+    return { content: '' };
   }
 
-  return readStdin();
+  return { content: await readStdin() };
+}
+
+async function resolveMemoryPath(
+  explicitPath?: string,
+  sessionPath?: string,
+): Promise<string> {
+  // Explicit -m flag takes priority
+  if (explicitPath) return explicitPath;
+
+  // Derive from discovered session location
+  if (sessionPath) return memoryPathFromSession(sessionPath);
+
+  // Try project-specific discovery based on cwd
+  const projectMemory = await discoverProjectMemoryPath();
+  if (projectMemory) return projectMemory;
+
+  // Global fallback
+  return path.join(os.homedir(), '.claude', 'MEMORY.md');
 }
 
 function readStdin(): Promise<string> {
