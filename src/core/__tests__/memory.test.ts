@@ -248,6 +248,27 @@ describe('mergeIntoMemory', () => {
     expect(entry.endsWith('...')).toBe(true);
   });
 
+  it('deduplicates new 500-char entry against existing 150-char truncated entry', () => {
+    const longDecision = 'x'.repeat(300);
+    // Simulate an old MEMORY.md with a 150-char truncated entry (no ellipsis in old format)
+    const oldTruncated = `- ${longDecision.slice(0, 150)}`;
+    const existingContent = `## Recent Decisions\n\n${oldTruncated}\n`;
+    const doc = parseMemoryDocument(existingContent);
+
+    // New snapshot has the full text — will be truncated to 500 (under limit, kept as-is)
+    const snapshot = makeSnapshot({
+      [SnapshotSection.KeyDecisions]: [{ text: longDecision, score: 5 }],
+    });
+
+    const { updatedDoc, entriesDeduplicated } = mergeIntoMemory(doc, snapshot);
+    const decisions = updatedDoc.sections[MemorySection.RecentDecisions].lines;
+    // Should deduplicate via prefix match — only one entry remains
+    expect(decisions).toHaveLength(1);
+    expect(entriesDeduplicated).toBeGreaterThanOrEqual(1);
+    // The longer entry should be kept
+    expect(decisions[0]!.length).toBeGreaterThan(oldTruncated.length);
+  });
+
   it('keeps short entries intact without ellipsis', () => {
     const doc = parseMemoryDocument('');
     const shortText = 'Use Commander for CLI parsing';

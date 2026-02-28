@@ -131,7 +131,10 @@ interface ResolvedInput {
 
 async function resolveInput(file?: string, inputFlag?: string): Promise<ResolvedInput> {
   const filePath = file ?? inputFlag;
-  if (filePath) return { content: await fs.readFile(filePath, 'utf-8') };
+  if (filePath) {
+    const resolved = path.resolve(filePath);
+    return { content: await fs.readFile(resolved, 'utf-8'), sessionPath: resolved };
+  }
 
   const discovered = await discoverLatestSession();
   if (discovered) {
@@ -160,8 +163,13 @@ async function resolveMemoryPath(
   // Explicit -m flag takes priority
   if (explicitPath) return explicitPath;
 
-  // Derive from discovered session location
-  if (sessionPath) return memoryPathFromSession(sessionPath);
+  // Derive from session location when it's a Claude Code session file
+  if (sessionPath) {
+    const projectsRoot = path.join(os.homedir(), '.claude', 'projects');
+    if (sessionPath.startsWith(projectsRoot + path.sep)) {
+      return memoryPathFromSession(sessionPath);
+    }
+  }
 
   // Try project-specific discovery based on cwd
   const projectMemory = await discoverProjectMemoryPath();
