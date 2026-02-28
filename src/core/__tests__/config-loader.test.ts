@@ -87,4 +87,21 @@ describe('config-loader', () => {
     expect(config.logLevel).toBe(DEFAULT_CONFIG.logLevel);
     expect(config.maxContext).toBe(DEFAULT_CONFIG.maxContext);
   });
+
+  it('deep merges defaultSectionLimit override', async () => {
+    const configPath = path.join(tmpDir, CONFIG_FILENAME);
+    await fs.writeFile(
+      configPath,
+      JSON.stringify({
+        memoryBudget: { defaultSectionLimit: 100 },
+      }),
+      'utf-8',
+    );
+
+    const config = await loadConfig(tmpDir);
+    expect(config.memoryBudget.defaultSectionLimit).toBe(100);
+    // Other budget values remain default
+    expect(config.memoryBudget.maxLines).toBe(DEFAULT_CONFIG.memoryBudget.maxLines);
+    expect(config.memoryBudget.sectionLimits).toEqual(DEFAULT_CONFIG.memoryBudget.sectionLimits);
+  });
 });

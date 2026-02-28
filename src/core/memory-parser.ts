@@ -1,43 +1,83 @@
-import { MemorySection, type MemoryDocument, type MemorySectionData } from '../models/index.js';
+import type { MemoryDocument, MemorySectionData } from '../models/index.js';
 
-const SECTION_HEADERS: Record<string, MemorySection> = {
-  '## pinned essentials': MemorySection.PinnedEssentials,
-  '## index links': MemorySection.IndexLinks,
-  '## recent decisions': MemorySection.RecentDecisions,
-};
+/**
+ * Convert a markdown header to a camelCase section key.
+ *
+ * Examples:
+ *   "## Pinned Essentials" → "pinnedEssentials"
+ *   "## User Preferences"  → "userPreferences"
+ *   "## Project Structure"  → "projectStructure"
+ *   "## CI/CD Pipeline"    → "ci/cdPipeline"
+ */
+export function toSectionKey(header: string): string {
+  const words = header
+    .replace(/^#+\s*/, '')
+    .trim()
+    .split(/\s+/);
+
+  return words
+    .map((word, i) =>
+      i === 0
+        ? word.toLowerCase()
+        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+    )
+    .join('');
+}
 
 function emptySectionData(header: string): MemorySectionData {
   return { header, lines: [], lineCount: 0 };
 }
 
 export function parseMemoryDocument(content: string): MemoryDocument {
-  const sections: Record<MemorySection, MemorySectionData> = {
-    [MemorySection.PinnedEssentials]: emptySectionData('## Pinned Essentials'),
-    [MemorySection.IndexLinks]: emptySectionData('## Index Links'),
-    [MemorySection.RecentDecisions]: emptySectionData('## Recent Decisions'),
-  };
+  const sections: Record<string, MemorySectionData> = {};
+  const sectionOrder: string[] = [];
+  let title: string | undefined;
+  const preamble: string[] = [];
 
   const lines = content.split('\n');
-  let currentSection: MemorySection | null = null;
+  let currentKey: string | null = null;
+  let seenFirstSection = false;
 
   for (const line of lines) {
-    const normalized = line.trim().toLowerCase();
-    const matchedSection = SECTION_HEADERS[normalized];
+    const trimmed = line.trim();
 
-    if (matchedSection !== undefined) {
-      currentSection = matchedSection;
-      sections[currentSection].header = line.trim();
+    // Detect H1 title (only before any ## section)
+    if (!seenFirstSection && /^#\s+/.test(trimmed) && !trimmed.startsWith('##')) {
+      title = trimmed;
       continue;
     }
 
-    if (currentSection !== null) {
-      sections[currentSection].lines.push(line);
+    // Detect H2 section header
+    if (trimmed.startsWith('## ')) {
+      seenFirstSection = true;
+      const key = toSectionKey(trimmed);
+
+      if (sections[key]) {
+        // Duplicate header normalizing to same key — append to existing
+        currentKey = key;
+      } else {
+        sections[key] = emptySectionData(trimmed);
+        sectionOrder.push(key);
+        currentKey = key;
+      }
+      continue;
+    }
+
+    // Lines before first section go into preamble (if title was found)
+    if (!seenFirstSection && title !== undefined) {
+      preamble.push(line);
+      continue;
+    }
+
+    // Content lines within a section
+    if (currentKey !== null) {
+      sections[currentKey]!.lines.push(line);
     }
   }
 
-  // Remove leading and trailing empty lines from each section
-  for (const section of Object.values(MemorySection)) {
-    const data = sections[section];
+  // Trim leading/trailing empty lines from each section and compute lineCount
+  for (const key of sectionOrder) {
+    const data = sections[key]!;
     while (data.lines.length > 0 && data.lines[0]!.trim() === '') {
       data.lines.shift();
     }
@@ -47,7 +87,22 @@ export function parseMemoryDocument(content: string): MemoryDocument {
     data.lineCount = data.lines.length;
   }
 
+  // Trim preamble
+  while (preamble.length > 0 && preamble[0]!.trim() === '') {
+    preamble.shift();
+  }
+  while (preamble.length > 0 && preamble[preamble.length - 1]!.trim() === '') {
+    preamble.pop();
+  }
+
   const totalLines = Object.values(sections).reduce((sum, s) => sum + s.lineCount, 0);
 
-  return { sections, totalLines, raw: content };
+  return {
+    sections,
+    sectionOrder,
+    title,
+    preamble: preamble.length > 0 ? preamble : undefined,
+    totalLines,
+    raw: content,
+  };
 }

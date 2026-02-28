@@ -4,6 +4,7 @@ import {
   DEFAULT_MEMORY_BUDGET,
   type MemoryBudget,
   type MemoryDocument,
+  type MemorySectionData,
   type Snapshot,
   type OverflowAction,
 } from '../models/index.js';
@@ -17,17 +18,27 @@ export interface MergeResult {
   entriesDeduplicated: number;
 }
 
+/**
+ * Convert a camelCase section key to a default markdown header.
+ * "pinnedEssentials" → "## Pinned Essentials"
+ */
+function toDefaultHeader(key: string): string {
+  const words = key.replace(/([A-Z])/g, ' $1').trim();
+  return '## ' + words.charAt(0).toUpperCase() + words.slice(1);
+}
+
 export function mergeIntoMemory(
   existingDoc: MemoryDocument,
   snapshot: Snapshot,
   budget: MemoryBudget = DEFAULT_MEMORY_BUDGET,
 ): MergeResult {
   const updatedSections = { ...existingDoc.sections };
+  const sectionOrder = [...existingDoc.sectionOrder];
   let totalAdded = 0;
   let totalDeduped = 0;
 
-  // Map snapshot sections to memory sections
-  const mapping: [SnapshotSection, MemorySection][] = [
+  // Map snapshot sections to memory section keys (strings, not enum)
+  const mapping: [SnapshotSection, string][] = [
     [SnapshotSection.ProjectGoal, MemorySection.PinnedEssentials],
     [SnapshotSection.KeyDecisions, MemorySection.RecentDecisions],
     [SnapshotSection.Constraints, MemorySection.PinnedEssentials],
@@ -35,12 +46,23 @@ export function mergeIntoMemory(
     [SnapshotSection.OpenTasks, MemorySection.RecentDecisions],
   ];
 
-  for (const [snapshotSection, memorySection] of mapping) {
+  for (const [snapshotSection, targetKey] of mapping) {
     const newEntries = snapshot.sections[snapshotSection];
     if (newEntries.length === 0) continue;
 
-    const existingLines = updatedSections[memorySection].lines;
-    const existingEntries = existingLines
+    // Ensure target section exists — create if absent
+    if (!updatedSections[targetKey]) {
+      const newSection: MemorySectionData = {
+        header: toDefaultHeader(targetKey),
+        lines: [],
+        lineCount: 0,
+      };
+      updatedSections[targetKey] = newSection;
+      sectionOrder.push(targetKey);
+    }
+
+    const sectionData = updatedSections[targetKey]!;
+    const existingEntries = sectionData.lines
       .filter((l) => l.trim().length > 0)
       .map((l) => ({ text: l }));
     const maxEntryLen = 500;
@@ -58,8 +80,8 @@ export function mergeIntoMemory(
     totalDeduped += beforeCount - afterCount;
     totalAdded += newDedupEntries.length - (beforeCount - afterCount);
 
-    updatedSections[memorySection] = {
-      ...updatedSections[memorySection],
+    updatedSections[targetKey] = {
+      ...sectionData,
       lines: deduped.map((e) => e.text),
       lineCount: deduped.length,
     };
@@ -69,6 +91,7 @@ export function mergeIntoMemory(
   const mergedDoc: MemoryDocument = {
     ...existingDoc,
     sections: updatedSections,
+    sectionOrder,
     totalLines,
   };
 

@@ -57,6 +57,8 @@ function deepMerge(defaults: CcIntelConfig, overrides: Record<string, unknown>):
     const mb = overrides['memoryBudget'] as Record<string, unknown>;
     result.memoryBudget = { ...defaults.memoryBudget };
     if (typeof mb['maxLines'] === 'number') result.memoryBudget.maxLines = mb['maxLines'];
+    if (typeof mb['defaultSectionLimit'] === 'number')
+      result.memoryBudget.defaultSectionLimit = mb['defaultSectionLimit'];
     if (mb['sectionLimits'] && typeof mb['sectionLimits'] === 'object') {
       result.memoryBudget.sectionLimits = {
         ...defaults.memoryBudget.sectionLimits,

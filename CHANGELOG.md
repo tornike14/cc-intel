@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-03-01
+
+### Changed
+
+- Memory system now supports arbitrary MEMORY.md section headers (Claude Code compatibility)
+- Parser dynamically discovers sections from any `## ...` header instead of hardcoding 3 fixed sections
+- Preserves H1 title lines (e.g., `# Project Memory`) and preamble text during round-trips
+- Section order from the source file is preserved during parse/serialize cycles
+- `cc-intel status` now displays all sections found in MEMORY.md, not just the 3 well-known ones
+- Budget enforcement uses `defaultSectionLimit` (default: 50 lines) as fallback for sections without explicit limits
+- `MemoryBudget` gained `defaultSectionLimit` field, configurable via `.cc-intelrc.json`
+- Merger creates cc-intel sections alongside existing Claude Code sections without destroying them
+
 ## [0.2.0] - 2026-02-28
 
 ### Added
