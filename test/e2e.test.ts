@@ -53,8 +53,8 @@ describe('E2E: full pipeline', () => {
     const existingDoc = parseMemoryDocument(existingMemory);
 
     // Verify existing has content
-    expect(existingDoc.sections[MemorySection.PinnedEssentials].lineCount).toBe(2);
-    expect(existingDoc.sections[MemorySection.RecentDecisions].lineCount).toBe(1);
+    expect(existingDoc.sections[MemorySection.PinnedEssentials]!.lineCount).toBe(2);
+    expect(existingDoc.sections[MemorySection.RecentDecisions]!.lineCount).toBe(1);
 
     // 6. Merge
     const { updatedDoc, entriesAdded } = mergeIntoMemory(existingDoc, snapshot);
@@ -153,7 +153,8 @@ describe('E2E: full pipeline', () => {
     const serialized = serializeMemoryDocument(updatedDoc);
 
     expect(serialized).toContain('## Pinned Essentials');
-    expect(serialized).toContain('## Index Links');
     expect(serialized).toContain('## Recent Decisions');
+    // Index Links only appears if artifact signals are detected — not guaranteed
+    // for short sessions without implementation artifacts
   });
 });

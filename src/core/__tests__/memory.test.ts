@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMemoryDocument } from '../memory-parser.js';
+import { parseMemoryDocument, toSectionKey } from '../memory-parser.js';
 import { serializeMemoryDocument } from '../memory-serializer.js';
 import { enforceBudget } from '../memory-budget.js';
 import { mergeIntoMemory } from '../memory-merger.js';
@@ -25,44 +25,115 @@ const SAMPLE_MEMORY = `## Pinned Essentials
 - Using Vitest over Jest
 `;
 
+const CLAUDE_CODE_MEMORY = `# cc-intel Project Memory
+
+## User Preferences
+- No co-author lines in git commits
+- No emoji in PR bodies
+- Open source workflow
+
+## Project Structure
+- Repo: tornike14/cc-intel (public, MIT)
+- Tech: ESM TypeScript, Commander CLI
+
+## Implementation Plan
+- 19 phases, each a feature branch + PR
+`;
+
+describe('toSectionKey', () => {
+  it('converts well-known headers to existing enum values', () => {
+    expect(toSectionKey('## Pinned Essentials')).toBe('pinnedEssentials');
+    expect(toSectionKey('## Index Links')).toBe('indexLinks');
+    expect(toSectionKey('## Recent Decisions')).toBe('recentDecisions');
+  });
+
+  it('converts Claude Code headers to camelCase', () => {
+    expect(toSectionKey('## User Preferences')).toBe('userPreferences');
+    expect(toSectionKey('## Project Structure')).toBe('projectStructure');
+    expect(toSectionKey('## Implementation Plan')).toBe('implementationPlan');
+  });
+
+  it('handles single-word headers', () => {
+    expect(toSectionKey('## Notes')).toBe('notes');
+  });
+});
+
 describe('parseMemoryDocument', () => {
   it('parses sections correctly', () => {
     const doc = parseMemoryDocument(SAMPLE_MEMORY);
-    expect(doc.sections[MemorySection.PinnedEssentials].lineCount).toBe(2);
-    expect(doc.sections[MemorySection.IndexLinks].lineCount).toBe(1);
-    expect(doc.sections[MemorySection.RecentDecisions].lineCount).toBe(2);
+    expect(doc.sections[MemorySection.PinnedEssentials]!.lineCount).toBe(2);
+    expect(doc.sections[MemorySection.IndexLinks]!.lineCount).toBe(1);
+    expect(doc.sections[MemorySection.RecentDecisions]!.lineCount).toBe(2);
   });
 
   it('preserves line content', () => {
     const doc = parseMemoryDocument(SAMPLE_MEMORY);
-    expect(doc.sections[MemorySection.PinnedEssentials].lines[0]).toContain('TypeScript');
+    expect(doc.sections[MemorySection.PinnedEssentials]!.lines[0]).toContain('TypeScript');
   });
 
   it('handles empty document', () => {
     const doc = parseMemoryDocument('');
     expect(doc.totalLines).toBe(0);
+    expect(doc.sectionOrder).toHaveLength(0);
+    expect(Object.keys(doc.sections)).toHaveLength(0);
   });
 
-  it('handles missing sections', () => {
+  it('handles document with only one section', () => {
     const doc = parseMemoryDocument('## Pinned Essentials\n\n- Only pinned\n');
-    expect(doc.sections[MemorySection.PinnedEssentials].lineCount).toBe(1);
-    expect(doc.sections[MemorySection.IndexLinks].lineCount).toBe(0);
-    expect(doc.sections[MemorySection.RecentDecisions].lineCount).toBe(0);
+    expect(doc.sections[MemorySection.PinnedEssentials]!.lineCount).toBe(1);
+    expect(doc.sectionOrder).toEqual(['pinnedEssentials']);
+    expect(doc.sections[MemorySection.IndexLinks]).toBeUndefined();
+    expect(doc.sections[MemorySection.RecentDecisions]).toBeUndefined();
+  });
+
+  it('preserves sectionOrder', () => {
+    const doc = parseMemoryDocument(SAMPLE_MEMORY);
+    expect(doc.sectionOrder).toEqual(['pinnedEssentials', 'indexLinks', 'recentDecisions']);
+  });
+
+  it('parses Claude Code memory with title and preamble', () => {
+    const doc = parseMemoryDocument(CLAUDE_CODE_MEMORY);
+    expect(doc.title).toBe('# cc-intel Project Memory');
+    expect(doc.sectionOrder).toEqual([
+      'userPreferences',
+      'projectStructure',
+      'implementationPlan',
+    ]);
+    expect(doc.sections['userPreferences']!.lineCount).toBe(3);
+    expect(doc.sections['projectStructure']!.lineCount).toBe(2);
+    expect(doc.sections['implementationPlan']!.lineCount).toBe(1);
+    expect(doc.totalLines).toBe(6);
+  });
+
+  it('preserves original header text', () => {
+    const doc = parseMemoryDocument(CLAUDE_CODE_MEMORY);
+    expect(doc.sections['userPreferences']!.header).toBe('## User Preferences');
   });
 });
 
 describe('serializeMemoryDocument', () => {
-  it('round-trips correctly', () => {
+  it('round-trips cc-intel format correctly', () => {
     const doc = parseMemoryDocument(SAMPLE_MEMORY);
     const serialized = serializeMemoryDocument(doc);
     const reparsed = parseMemoryDocument(serialized);
 
-    expect(reparsed.sections[MemorySection.PinnedEssentials].lineCount).toBe(
-      doc.sections[MemorySection.PinnedEssentials].lineCount,
+    expect(reparsed.sections[MemorySection.PinnedEssentials]!.lineCount).toBe(
+      doc.sections[MemorySection.PinnedEssentials]!.lineCount,
     );
-    expect(reparsed.sections[MemorySection.RecentDecisions].lineCount).toBe(
-      doc.sections[MemorySection.RecentDecisions].lineCount,
+    expect(reparsed.sections[MemorySection.RecentDecisions]!.lineCount).toBe(
+      doc.sections[MemorySection.RecentDecisions]!.lineCount,
     );
+  });
+
+  it('round-trips Claude Code format with title', () => {
+    const doc = parseMemoryDocument(CLAUDE_CODE_MEMORY);
+    const serialized = serializeMemoryDocument(doc);
+    const reparsed = parseMemoryDocument(serialized);
+
+    expect(reparsed.title).toBe('# cc-intel Project Memory');
+    expect(reparsed.sectionOrder).toEqual(doc.sectionOrder);
+    expect(reparsed.sections['userPreferences']!.lineCount).toBe(3);
+    expect(reparsed.totalLines).toBe(doc.totalLines);
   });
 
   it('outputs sections in correct order', () => {
@@ -82,7 +153,7 @@ describe('enforceBudget', () => {
     const doc = parseMemoryDocument(SAMPLE_MEMORY);
     const { trimmedDoc, overflowActions } = enforceBudget(doc);
     expect(overflowActions).toHaveLength(0);
-    expect(trimmedDoc.sections[MemorySection.PinnedEssentials].lineCount).toBe(2);
+    expect(trimmedDoc.sections[MemorySection.PinnedEssentials]!.lineCount).toBe(2);
   });
 
   it('overflows section exceeding limit', () => {
@@ -93,11 +164,10 @@ describe('enforceBudget', () => {
     const { trimmedDoc, overflowActions } = enforceBudget(doc);
     expect(overflowActions).toHaveLength(1);
     expect(overflowActions[0]!.section).toBe(MemorySection.RecentDecisions);
-    expect(trimmedDoc.sections[MemorySection.RecentDecisions].lineCount).toBeLessThanOrEqual(61);
+    expect(trimmedDoc.sections[MemorySection.RecentDecisions]!.lineCount).toBeLessThanOrEqual(61);
   });
 
   it('enforces global maxLines without infinite loop', () => {
-    // Create a document where section limits are fine but total exceeds maxLines
     const pinnedLines = Array.from({ length: 10 }, (_, i) => `- Pinned ${i}`);
     const indexLines = Array.from({ length: 10 }, (_, i) => `- Index ${i}`);
     const decisionLines = Array.from({ length: 10 }, (_, i) => `- Decision ${i}`);
@@ -118,9 +188,9 @@ describe('enforceBudget', () => {
     const doc = parseMemoryDocument(content);
     expect(doc.totalLines).toBe(30);
 
-    // Set a tight global cap below total but above what section limits would trim
     const budget = {
       maxLines: 15,
+      defaultSectionLimit: 50,
       sectionLimits: {
         [MemorySection.PinnedEssentials]: 80,
         [MemorySection.IndexLinks]: 40,
@@ -140,6 +210,7 @@ describe('enforceBudget', () => {
 
     const budget = {
       maxLines: 5,
+      defaultSectionLimit: 50,
       sectionLimits: {
         [MemorySection.PinnedEssentials]: 80,
         [MemorySection.IndexLinks]: 40,
@@ -154,28 +225,38 @@ describe('enforceBudget', () => {
   });
 
   it('avoids filename collision between section-limit and global overflow passes', () => {
-    // Create a section that exceeds its section limit AND total exceeds maxLines
     const lines = Array.from({ length: 100 }, (_, i) => `- Decision ${i}`);
     const content = `## Recent Decisions\n\n${lines.join('\n')}\n`;
     const doc = parseMemoryDocument(content);
 
     const budget = {
       maxLines: 10,
+      defaultSectionLimit: 50,
       sectionLimits: {
         [MemorySection.PinnedEssentials]: 80,
         [MemorySection.IndexLinks]: 40,
-        [MemorySection.RecentDecisions]: 30, // section limit triggers first pass
+        [MemorySection.RecentDecisions]: 30,
       },
     };
 
     const { overflowActions } = enforceBudget(doc, budget);
-    // Should have at least 2 overflows: one from section-limit pass, one from global pass
     expect(overflowActions.length).toBeGreaterThanOrEqual(2);
 
-    // All filenames must be unique — no collision between passes
     const filenames = overflowActions.map((a) => a.topicFileLink);
     const uniqueFilenames = new Set(filenames);
     expect(uniqueFilenames.size).toBe(filenames.length);
+  });
+
+  it('uses defaultSectionLimit for unknown sections', () => {
+    const lines = Array.from({ length: 60 }, (_, i) => `- Pref ${i}`);
+    const content = `## User Preferences\n\n${lines.join('\n')}\n`;
+    const doc = parseMemoryDocument(content);
+
+    // defaultSectionLimit = 50, no explicit limit for userPreferences
+    const { trimmedDoc, overflowActions } = enforceBudget(doc);
+    expect(overflowActions).toHaveLength(1);
+    expect(overflowActions[0]!.section).toBe('userPreferences');
+    expect(trimmedDoc.sections['userPreferences']!.lineCount).toBeLessThanOrEqual(51);
   });
 });
 
@@ -202,7 +283,7 @@ describe('mergeIntoMemory', () => {
 
     const { updatedDoc, entriesAdded } = mergeIntoMemory(doc, snapshot);
     expect(entriesAdded).toBeGreaterThan(0);
-    const decisions = updatedDoc.sections[MemorySection.RecentDecisions].lines;
+    const decisions = updatedDoc.sections[MemorySection.RecentDecisions]!.lines;
     expect(decisions.some((l) => l.includes('Commander'))).toBe(true);
   });
 
@@ -241,7 +322,7 @@ describe('mergeIntoMemory', () => {
     });
 
     const { updatedDoc } = mergeIntoMemory(doc, snapshot);
-    const decisions = updatedDoc.sections[MemorySection.RecentDecisions].lines;
+    const decisions = updatedDoc.sections[MemorySection.RecentDecisions]!.lines;
     const entry = decisions.find((l) => l.includes('xxx'))!;
     // "- " prefix (2) + 500 chars + "..." (3) = 505 total
     expect(entry.length).toBe(505);
@@ -250,22 +331,18 @@ describe('mergeIntoMemory', () => {
 
   it('deduplicates new 500-char entry against existing 150-char truncated entry', () => {
     const longDecision = 'x'.repeat(300);
-    // Simulate an old MEMORY.md with a 150-char truncated entry (no ellipsis in old format)
     const oldTruncated = `- ${longDecision.slice(0, 150)}`;
     const existingContent = `## Recent Decisions\n\n${oldTruncated}\n`;
     const doc = parseMemoryDocument(existingContent);
 
-    // New snapshot has the full text — will be truncated to 500 (under limit, kept as-is)
     const snapshot = makeSnapshot({
       [SnapshotSection.KeyDecisions]: [{ text: longDecision, score: 5 }],
     });
 
     const { updatedDoc, entriesDeduplicated } = mergeIntoMemory(doc, snapshot);
-    const decisions = updatedDoc.sections[MemorySection.RecentDecisions].lines;
-    // Should deduplicate via prefix match — only one entry remains
+    const decisions = updatedDoc.sections[MemorySection.RecentDecisions]!.lines;
     expect(decisions).toHaveLength(1);
     expect(entriesDeduplicated).toBeGreaterThanOrEqual(1);
-    // The longer entry should be kept
     expect(decisions[0]!.length).toBeGreaterThan(oldTruncated.length);
   });
 
@@ -277,9 +354,27 @@ describe('mergeIntoMemory', () => {
     });
 
     const { updatedDoc } = mergeIntoMemory(doc, snapshot);
-    const decisions = updatedDoc.sections[MemorySection.RecentDecisions].lines;
+    const decisions = updatedDoc.sections[MemorySection.RecentDecisions]!.lines;
     const entry = decisions.find((l) => l.includes('Commander'))!;
     expect(entry).toBe(`- ${shortText}`);
     expect(entry.endsWith('...')).toBe(false);
+  });
+
+  it('creates cc-intel sections alongside existing Claude Code sections', () => {
+    const doc = parseMemoryDocument(CLAUDE_CODE_MEMORY);
+    const snapshot = makeSnapshot({
+      [SnapshotSection.KeyDecisions]: [{ text: 'Use Commander for CLI', score: 4 }],
+    });
+
+    const { updatedDoc } = mergeIntoMemory(doc, snapshot);
+    // Existing Claude Code sections preserved
+    expect(updatedDoc.sections['userPreferences']!.lineCount).toBe(3);
+    // New cc-intel section created
+    expect(updatedDoc.sections[MemorySection.RecentDecisions]).toBeDefined();
+    expect(updatedDoc.sections[MemorySection.RecentDecisions]!.lines.some((l) => l.includes('Commander'))).toBe(true);
+    // Claude Code sections come first in order, new section appended
+    expect(updatedDoc.sectionOrder.indexOf('userPreferences')).toBeLessThan(
+      updatedDoc.sectionOrder.indexOf('recentDecisions'),
+    );
   });
 });

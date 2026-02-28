@@ -1,16 +1,21 @@
-import { MemorySection, type MemoryDocument } from '../models/index.js';
-
-const SECTION_ORDER = [
-  MemorySection.PinnedEssentials,
-  MemorySection.IndexLinks,
-  MemorySection.RecentDecisions,
-];
+import type { MemoryDocument } from '../models/index.js';
 
 export function serializeMemoryDocument(doc: MemoryDocument): string {
   const parts: string[] = [];
 
-  for (const section of SECTION_ORDER) {
-    const data = doc.sections[section];
+  if (doc.title) {
+    parts.push(doc.title);
+    if (doc.preamble && doc.preamble.length > 0) {
+      parts.push('');
+      parts.push(...doc.preamble);
+    }
+    parts.push('');
+  }
+
+  for (const key of doc.sectionOrder) {
+    const data = doc.sections[key];
+    if (!data) continue;
+
     parts.push(data.header);
     if (data.lines.length > 0) {
       parts.push('');

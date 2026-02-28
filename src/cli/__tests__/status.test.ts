@@ -41,16 +41,51 @@ describe('status helpers', () => {
     const snapshot = await fs.readFile(memoryPath, 'utf-8');
     const doc = parseMemoryDocument(snapshot);
 
-    expect(doc.sections[MemorySection.PinnedEssentials].lineCount).toBe(3);
-    expect(doc.sections[MemorySection.IndexLinks].lineCount).toBe(1);
-    expect(doc.sections[MemorySection.RecentDecisions].lineCount).toBe(2);
+    expect(doc.sections[MemorySection.PinnedEssentials]!.lineCount).toBe(3);
+    expect(doc.sections[MemorySection.IndexLinks]!.lineCount).toBe(1);
+    expect(doc.sections[MemorySection.RecentDecisions]!.lineCount).toBe(2);
     expect(doc.totalLines).toBe(6);
   });
 
   it('computes budget percentages correctly', () => {
     const budget = DEFAULT_MEMORY_BUDGET;
     const lineCount = 40;
-    const limit = budget.sectionLimits[MemorySection.PinnedEssentials];
+    const limit = budget.sectionLimits[MemorySection.PinnedEssentials]!;
+    const percent = Math.round((lineCount / limit) * 100);
+    expect(percent).toBe(50);
+  });
+
+  it('parses Claude Code MEMORY.md with arbitrary sections', async () => {
+    const memoryPath = path.join(tmpDir, 'MEMORY.md');
+    const content = [
+      '# My Project Memory',
+      '',
+      '## User Preferences',
+      '- No emoji in commits',
+      '- Open source workflow',
+      '',
+      '## Project Structure',
+      '- Tech: ESM TypeScript',
+      '',
+    ].join('\n');
+
+    await safeWriteFile(memoryPath, content);
+    const snapshot = await fs.readFile(memoryPath, 'utf-8');
+    const doc = parseMemoryDocument(snapshot);
+
+    expect(doc.title).toBe('# My Project Memory');
+    expect(doc.sectionOrder).toEqual(['userPreferences', 'projectStructure']);
+    expect(doc.sections['userPreferences']!.lineCount).toBe(2);
+    expect(doc.sections['projectStructure']!.lineCount).toBe(1);
+    expect(doc.totalLines).toBe(3);
+  });
+
+  it('uses defaultSectionLimit for unknown sections in budget', () => {
+    const budget = DEFAULT_MEMORY_BUDGET;
+    const unknownKey = 'userPreferences';
+    const limit = budget.sectionLimits[unknownKey] ?? budget.defaultSectionLimit;
+    expect(limit).toBe(50);
+    const lineCount = 25;
     const percent = Math.round((lineCount / limit) * 100);
     expect(percent).toBe(50);
   });

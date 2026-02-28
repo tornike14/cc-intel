@@ -1,5 +1,4 @@
 import {
-  MemorySection,
   DEFAULT_MEMORY_BUDGET,
   type MemoryBudget,
   type MemoryDocument,
@@ -22,9 +21,10 @@ export function enforceBudget(
   // Use timestamp with seconds so overflow files are unique across runs on same day
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
-  for (const section of Object.values(MemorySection)) {
-    const data = trimmedSections[section];
-    const limit = budget.sectionLimits[section];
+  // Pass 1: enforce per-section limits
+  for (const section of Object.keys(trimmedSections)) {
+    const data = trimmedSections[section]!;
+    const limit = budget.sectionLimits[section] ?? budget.defaultSectionLimit;
 
     if (data.lineCount <= limit) continue;
 
@@ -51,7 +51,7 @@ export function enforceBudget(
 
   let totalLines = Object.values(trimmedSections).reduce((sum, s) => sum + s.lineCount, 0);
 
-  // Enforce global maxLines cap by trimming largest sections first
+  // Pass 2: enforce global maxLines cap by trimming largest sections first
   // Seed counter with filenames already emitted by section-limit pass
   const overflowCounter: Record<string, number> = {};
   for (const action of overflowActions) {
@@ -59,12 +59,14 @@ export function enforceBudget(
     overflowCounter[key] = (overflowCounter[key] ?? 0) + 1;
   }
   while (totalLines > budget.maxLines) {
-    const sections = Object.values(MemorySection);
-    const largest = sections.reduce((max, s) =>
-      trimmedSections[s].lineCount > trimmedSections[max].lineCount ? s : max,
+    const sectionKeys = Object.keys(trimmedSections);
+    if (sectionKeys.length === 0) break;
+
+    const largest = sectionKeys.reduce((max, s) =>
+      trimmedSections[s]!.lineCount > trimmedSections[max]!.lineCount ? s : max,
     );
 
-    const data = trimmedSections[largest];
+    const data = trimmedSections[largest]!;
     if (data.lineCount <= 1) break; // Cannot trim further
 
     const excess = totalLines - budget.maxLines;

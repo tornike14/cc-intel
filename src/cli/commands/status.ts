@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import os from 'node:os';
 import path from 'node:path';
-import { MemorySection, DEFAULT_MEMORY_BUDGET } from '../../models/index.js';
+import { DEFAULT_MEMORY_BUDGET } from '../../models/index.js';
 import { parseMemoryDocument } from '../../core/memory-parser.js';
 import { discoverProjectMemoryPath } from '../../core/session-discovery.js';
 import { safeReadFile } from '../../utils/safe-fs.js';
@@ -31,14 +31,17 @@ export function createStatusCommand(): Command {
         totalLines: doc.totalLines,
         maxLines: budget.maxLines,
         utilizationPercent: Math.round((doc.totalLines / budget.maxLines) * 100),
-        sections: Object.values(MemorySection).map((section) => ({
-          name: section,
-          lines: doc.sections[section].lineCount,
-          limit: budget.sectionLimits[section],
-          percent: Math.round(
-            (doc.sections[section].lineCount / budget.sectionLimits[section]) * 100,
-          ),
-        })),
+        sections: doc.sectionOrder.map((key) => {
+          const data = doc.sections[key]!;
+          const limit = budget.sectionLimits[key] ?? budget.defaultSectionLimit;
+          return {
+            name: data.header.replace(/^#+\s*/, ''),
+            key,
+            lines: data.lineCount,
+            limit,
+            percent: Math.round((data.lineCount / limit) * 100),
+          };
+        }),
       };
 
       if (options.json) {
