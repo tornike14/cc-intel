@@ -11,28 +11,28 @@ npm run build
 
 ## Scripts
 
-| Command | Description |
-|---------|-------------|
-| `npm run build` | Build with tsup |
-| `npm run dev` | Build in watch mode |
-| `npm run lint` | Run ESLint |
-| `npm run format` | Format with Prettier |
-| `npm run format:check` | Check formatting |
-| `npm run test` | Run tests |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run test:coverage` | Run tests with coverage |
-| `npm run typecheck` | TypeScript type checking |
+| Command                 | Description              |
+| ----------------------- | ------------------------ |
+| `npm run build`         | Build with tsup          |
+| `npm run dev`           | Build in watch mode      |
+| `npm run lint`          | Run ESLint               |
+| `npm run format`        | Format with Prettier     |
+| `npm run format:check`  | Check formatting         |
+| `npm run test`          | Run tests                |
+| `npm run test:watch`    | Run tests in watch mode  |
+| `npm run test:coverage` | Run tests with coverage  |
+| `npm run typecheck`     | TypeScript type checking |
 
 ## Branch Naming
 
-| Prefix | Use |
-|--------|-----|
-| `setup/` | Infrastructure, tooling, CI |
-| `feat/` | New module or feature |
-| `fix/` | Bug fixes |
-| `docs/` | Documentation only |
-| `release/` | Version bumps |
-| `chore/` | Maintenance, dependency updates |
+| Prefix     | Use                             |
+| ---------- | ------------------------------- |
+| `setup/`   | Infrastructure, tooling, CI     |
+| `feat/`    | New module or feature           |
+| `fix/`     | Bug fixes                       |
+| `docs/`    | Documentation only              |
+| `release/` | Version bumps                   |
+| `chore/`   | Maintenance, dependency updates |
 
 ## Commit Convention
 
