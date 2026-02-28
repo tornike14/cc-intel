@@ -8,6 +8,7 @@ import {
   DEFAULT_SNAPSHOT_CONFIG,
 } from '../models/index.js';
 import type { SegmentedSession } from './segmenter.js';
+import { isBoilerplate } from '../utils/text.js';
 
 function toEntry(content: string, score: number): SnapshotEntry {
   return { text: content, score };
@@ -30,17 +31,32 @@ export function extractSnapshot(
 ): Snapshot {
   const max = config.maxItemsPerSection;
 
+  // Filter boilerplate (session continuation summaries, etc.) from extraction
+  // but keep original segmented for metadata (message counts stay accurate)
+  const filtered: SegmentedSession = {
+    [SessionPhase.Goal]: segmented[SessionPhase.Goal].filter((m) => !isBoilerplate(m.content)),
+    [SessionPhase.Exploration]: segmented[SessionPhase.Exploration].filter(
+      (m) => !isBoilerplate(m.content),
+    ),
+    [SessionPhase.Implementation]: segmented[SessionPhase.Implementation].filter(
+      (m) => !isBoilerplate(m.content),
+    ),
+    [SessionPhase.WrapUp]: segmented[SessionPhase.WrapUp].filter(
+      (m) => !isBoilerplate(m.content),
+    ),
+  };
+
   // Project goal from Goal phase — highest scored messages
-  const projectGoal = segmented[SessionPhase.Goal]
+  const projectGoal = filtered[SessionPhase.Goal]
     .slice(0, max)
     .map((m) => toEntry(m.content, m.importanceScore));
 
   // Key decisions — from all phases, filter by decision signals
   const allMessages = [
-    ...segmented[SessionPhase.Goal],
-    ...segmented[SessionPhase.Exploration],
-    ...segmented[SessionPhase.Implementation],
-    ...segmented[SessionPhase.WrapUp],
+    ...filtered[SessionPhase.Goal],
+    ...filtered[SessionPhase.Exploration],
+    ...filtered[SessionPhase.Implementation],
+    ...filtered[SessionPhase.WrapUp],
   ].sort((a, b) => b.importanceScore - a.importanceScore);
 
   const keyDecisions = extractByCategory(allMessages, 'decision' as SignalCategory, max);
@@ -50,8 +66,8 @@ export function extractSnapshot(
 
   // Implementation artifacts — primarily from Implementation phase
   const implMessages = [
-    ...segmented[SessionPhase.Implementation],
-    ...segmented[SessionPhase.Exploration],
+    ...filtered[SessionPhase.Implementation],
+    ...filtered[SessionPhase.Exploration],
   ].sort((a, b) => b.importanceScore - a.importanceScore);
 
   const implementationArtifacts = extractByCategory(
@@ -62,10 +78,10 @@ export function extractSnapshot(
 
   // Open tasks — from WrapUp and all phases
   const wrapUpFirst = [
-    ...segmented[SessionPhase.WrapUp],
-    ...segmented[SessionPhase.Implementation],
-    ...segmented[SessionPhase.Exploration],
-    ...segmented[SessionPhase.Goal],
+    ...filtered[SessionPhase.WrapUp],
+    ...filtered[SessionPhase.Implementation],
+    ...filtered[SessionPhase.Exploration],
+    ...filtered[SessionPhase.Goal],
   ];
 
   const openTasks = extractByCategory(wrapUpFirst, 'todo' as SignalCategory, max);

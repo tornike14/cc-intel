@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 
 ## [0.3.0] - 2026-03-01
 
+### Fixed
+
+- Snapshot extraction now filters session continuation boilerplate ("This session is being continued from a previous conversation...") that was polluting knowledge capture with context-restoration artifacts
+
 ### Changed
 
 - Memory system now supports arbitrary MEMORY.md section headers (Claude Code compatibility)
