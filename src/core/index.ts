@@ -8,3 +8,4 @@ export * from './memory-parser.js';
 export * from './memory-serializer.js';
 export * from './memory-budget.js';
 export * from './memory-merger.js';
+export * from './session-parser.js';
