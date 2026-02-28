@@ -1,0 +1,21 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+### Added
+
+- CLI commands: `snapshot`, `risk`, `preserve`, `status`
+- Heuristic signal detection with weighted scoring (Decision, Constraint, Artifact, Todo)
+- Session segmentation into 4 phases (Goal, Exploration, Implementation, WrapUp)
+- Snapshot extraction with 5 structured sections
+- Deduplication engine using Dice coefficient similarity
+- MEMORY.md parser, serializer, budget enforcement, and merger
+- Context risk assessment with token estimation
+- Atomic file operations with advisory locking
+- Configuration file support (`.cc-intelrc.json`) with env var overrides
+- JSONL and markdown session input formats with auto-detection
+- End-to-end integration tests
+- CI/CD with GitHub Actions (Node 18/20/22 matrix)
+- Full documentation (README, architecture, API reference)
