@@ -6,7 +6,7 @@ import { createStatusCommand } from './commands/status.js';
 
 const program = new Command();
 
-program.name('cc-intel').description('Context guardian for Claude Code sessions').version('0.0.0');
+program.name('cc-intel').description('Context guardian for Claude Code sessions').version('0.1.0');
 
 program.addCommand(createSnapshotCommand());
 program.addCommand(createRiskCommand());
