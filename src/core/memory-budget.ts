@@ -19,6 +19,9 @@ export function enforceBudget(
 
   const trimmedSections = { ...doc.sections };
 
+  // Use timestamp with seconds so overflow files are unique across runs on same day
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+
   for (const section of Object.values(MemorySection)) {
     const data = trimmedSections[section];
     const limit = budget.sectionLimits[section];
@@ -30,18 +33,18 @@ export function enforceBudget(
     const overflowLines = data.lines.slice(limit);
 
     const overflowContent = overflowLines.join('\n');
-    const dateStr = new Date().toISOString().split('T')[0]!;
+    const filename = `${section}-${timestamp}.md`;
 
     overflowActions.push({
       section,
-      summaryBullet: `- See overflow: ${section}-${dateStr}.md`,
-      topicFileLink: `${section}-${dateStr}.md`,
+      summaryBullet: `- See overflow: ${filename}`,
+      topicFileLink: filename,
       originalContent: overflowContent,
     });
 
     trimmedSections[section] = {
       ...data,
-      lines: [...keptLines, `- See overflow: ${section}-${dateStr}.md`],
+      lines: [...keptLines, `- See overflow: ${filename}`],
       lineCount: keptLines.length + 1,
     };
   }
@@ -75,11 +78,10 @@ export function enforceBudget(
     const overflowLines = data.lines.slice(newLimit);
 
     if (overflowLines.length > 0) {
-      const dateStr = new Date().toISOString().split('T')[0]!;
-      const countKey = `${largest}-${dateStr}`;
+      const countKey = `${largest}-${timestamp}`;
       overflowCounter[countKey] = (overflowCounter[countKey] ?? 0) + 1;
       const suffix = overflowCounter[countKey]! > 1 ? `-${overflowCounter[countKey]}` : '';
-      const filename = `${largest}-${dateStr}${suffix}.md`;
+      const filename = `${largest}-${timestamp}${suffix}.md`;
 
       overflowActions.push({
         section: largest,
