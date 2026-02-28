@@ -95,6 +95,63 @@ describe('enforceBudget', () => {
     expect(overflowActions[0]!.section).toBe(MemorySection.RecentDecisions);
     expect(trimmedDoc.sections[MemorySection.RecentDecisions].lineCount).toBeLessThanOrEqual(61);
   });
+
+  it('enforces global maxLines without infinite loop', () => {
+    // Create a document where section limits are fine but total exceeds maxLines
+    const pinnedLines = Array.from({ length: 10 }, (_, i) => `- Pinned ${i}`);
+    const indexLines = Array.from({ length: 10 }, (_, i) => `- Index ${i}`);
+    const decisionLines = Array.from({ length: 10 }, (_, i) => `- Decision ${i}`);
+    const content = [
+      '## Pinned Essentials',
+      '',
+      ...pinnedLines,
+      '',
+      '## Index Links',
+      '',
+      ...indexLines,
+      '',
+      '## Recent Decisions',
+      '',
+      ...decisionLines,
+    ].join('\n');
+
+    const doc = parseMemoryDocument(content);
+    expect(doc.totalLines).toBe(30);
+
+    // Set a tight global cap below total but above what section limits would trim
+    const budget = {
+      maxLines: 15,
+      sectionLimits: {
+        [MemorySection.PinnedEssentials]: 80,
+        [MemorySection.IndexLinks]: 40,
+        [MemorySection.RecentDecisions]: 60,
+      },
+    };
+
+    const { trimmedDoc, overflowActions } = enforceBudget(doc, budget);
+    expect(trimmedDoc.totalLines).toBeLessThanOrEqual(15);
+    expect(overflowActions.length).toBeGreaterThan(0);
+  });
+
+  it('uses unique filenames for multiple overflows of same section', () => {
+    const lines = Array.from({ length: 50 }, (_, i) => `- Entry ${i}`);
+    const content = `## Pinned Essentials\n\n${lines.join('\n')}\n`;
+    const doc = parseMemoryDocument(content);
+
+    const budget = {
+      maxLines: 5,
+      sectionLimits: {
+        [MemorySection.PinnedEssentials]: 80,
+        [MemorySection.IndexLinks]: 40,
+        [MemorySection.RecentDecisions]: 60,
+      },
+    };
+
+    const { overflowActions } = enforceBudget(doc, budget);
+    const filenames = overflowActions.map((a) => a.topicFileLink);
+    const uniqueFilenames = new Set(filenames);
+    expect(uniqueFilenames.size).toBe(filenames.length);
+  });
 });
 
 function makeSnapshot(entries: Partial<Record<SnapshotSection, SnapshotEntry[]>>): Snapshot {
