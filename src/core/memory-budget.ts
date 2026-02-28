@@ -46,7 +46,40 @@ export function enforceBudget(
     };
   }
 
-  const totalLines = Object.values(trimmedSections).reduce((sum, s) => sum + s.lineCount, 0);
+  let totalLines = Object.values(trimmedSections).reduce((sum, s) => sum + s.lineCount, 0);
+
+  // Enforce global maxLines cap by trimming largest sections first
+  while (totalLines > budget.maxLines) {
+    const sections = Object.values(MemorySection);
+    const largest = sections.reduce((max, s) =>
+      trimmedSections[s].lineCount > trimmedSections[max].lineCount ? s : max,
+    );
+
+    const data = trimmedSections[largest];
+    if (data.lineCount <= 1) break; // Cannot trim further
+
+    const newLimit = Math.max(1, data.lineCount - (totalLines - budget.maxLines));
+    const keptLines = data.lines.slice(0, newLimit);
+    const overflowLines = data.lines.slice(newLimit);
+
+    if (overflowLines.length > 0) {
+      const dateStr = new Date().toISOString().split('T')[0]!;
+      overflowActions.push({
+        section: largest,
+        summaryBullet: `- See overflow: ${largest}-${dateStr}.md`,
+        topicFileLink: `${largest}-${dateStr}.md`,
+        originalContent: overflowLines.join('\n'),
+      });
+
+      trimmedSections[largest] = {
+        ...data,
+        lines: [...keptLines, `- See overflow: ${largest}-${dateStr}.md`],
+        lineCount: keptLines.length + 1,
+      };
+    }
+
+    totalLines = Object.values(trimmedSections).reduce((sum, s) => sum + s.lineCount, 0);
+  }
 
   return {
     trimmedDoc: { ...doc, sections: trimmedSections, totalLines },

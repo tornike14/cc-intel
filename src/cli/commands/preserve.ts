@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { DEFAULT_MEMORY_BUDGET, type CcIntelConfig } from '../../models/index.js';
 import { parseSession } from '../../core/session-parser.js';
 import { segmentSession } from '../../core/segmenter.js';
 import { extractSnapshot } from '../../core/snapshot.js';
@@ -12,14 +13,16 @@ import { createLogger } from '../../utils/logger.js';
 
 const logger = createLogger('preserve');
 
-export function createPreserveCommand(): Command {
+export function createPreserveCommand(config?: CcIntelConfig): Command {
+  const defaultMaxLines = config?.memoryBudget?.maxLines?.toString() ?? '200';
+
   return new Command('preserve')
     .description('Merge session knowledge into MEMORY.md with deduplication')
     .option('-i, --input <path>', 'Session file path (default: stdin)')
     .option('-f, --format <fmt>', 'Input format: auto, jsonl, markdown', 'auto')
     .option('-m, --memory <path>', 'MEMORY.md path', resolveDefaultMemoryPath())
     .option('--dry-run', 'Preview changes without writing')
-    .option('--max-lines <n>', 'Max MEMORY.md lines', '200')
+    .option('--max-lines <n>', 'Max MEMORY.md lines', defaultMaxLines)
     .action(
       async (options: {
         input?: string;
@@ -51,13 +54,15 @@ export function createPreserveCommand(): Command {
 
         // 4. Merge
         const maxLines = parseInt(options.maxLines, 10);
+        const baseBudget = config?.memoryBudget ?? DEFAULT_MEMORY_BUDGET;
         const budget = {
-          maxLines,
-          sectionLimits: existingDoc.sections,
+          ...baseBudget,
+          maxLines: Number.isNaN(maxLines) ? baseBudget.maxLines : maxLines,
         };
         const { updatedDoc, overflowActions, entriesAdded, entriesDeduplicated } = mergeIntoMemory(
           existingDoc,
           snapshot,
+          budget,
         );
 
         // 5. Output results
@@ -71,8 +76,6 @@ export function createPreserveCommand(): Command {
           process.stdout.write(`Entries deduplicated: ${entriesDeduplicated}\n`);
           process.stdout.write(`Overflow actions: ${overflowActions.length}\n`);
           process.stdout.write(`Total lines: ${updatedDoc.totalLines}\n`);
-          // Suppress unused variable warnings
-          void budget;
           return;
         }
 
