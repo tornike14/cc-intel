@@ -27,6 +27,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- `preserve --input <file>` now derives MEMORY.md path from the session file location when the file is under `~/.claude/projects/`, instead of falling back to cwd or global
+- Deduplication now detects prefix matches across truncation limit changes (e.g., upgrading from 150-char to 500-char entries), keeping the longer entry
 - Budget enforcement infinite loop when `totalLines - maxLines = 1`
 - Duplicate overflow filenames when same section overflows multiple times on same date
 - Overflow filename collision between section-limit and global trimming passes

@@ -49,8 +49,37 @@ function sumValues(map: Map<string, number>): number {
 }
 
 /**
+ * Check if one entry is a truncated prefix of another.
+ * Handles dedup across truncation limit changes (e.g., 150→500 chars).
+ *
+ * Strips leading bullet markers (`- `) and trailing ellipsis (`...`) before
+ * comparing, so `- Decided to use React...` matches `- Decided to use React for SSR`.
+ */
+export function isPrefixMatch(a: string, b: string): boolean {
+  const normA = normalizeForPrefix(a);
+  const normB = normalizeForPrefix(b);
+
+  if (normA.length < 20 || normB.length < 20) return false;
+
+  const [shorter, longer] =
+    normA.length <= normB.length ? [normA, normB] : [normB, normA];
+
+  return longer.startsWith(shorter);
+}
+
+function normalizeForPrefix(text: string): string {
+  return normalizeWhitespace(text)
+    .toLowerCase()
+    .replace(/^-\s*/, '')
+    .replace(/\.{3}$/, '');
+}
+
+/**
  * Deduplicate entries. Entries with similarity >= threshold are grouped,
  * and the most recent (by timestamp or last in array) is kept.
+ *
+ * Also detects prefix matches (one entry is a truncated prefix of another)
+ * and keeps the longer entry to preserve context.
  */
 export function deduplicate(entries: DedupEntry[], threshold = 0.85): DedupEntry[] {
   if (entries.length <= 1) return [...entries];
@@ -72,6 +101,10 @@ export function deduplicate(entries: DedupEntry[], threshold = 0.85): DedupEntry
         consumed.add(j);
         // Keep the more recent one (later in array, or by timestamp)
         best = pickMoreRecent(best, entries[j]!);
+      } else if (isPrefixMatch(best.text, entries[j]!.text)) {
+        consumed.add(j);
+        // Keep the longer entry (more context preserved)
+        best = best.text.length >= entries[j]!.text.length ? best : entries[j]!;
       }
     }
 

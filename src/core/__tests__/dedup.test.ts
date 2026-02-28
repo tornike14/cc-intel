@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deduplicate, computeSimilarity } from '../dedup.js';
+import { deduplicate, computeSimilarity, isPrefixMatch } from '../dedup.js';
 
 describe('computeSimilarity', () => {
   it('returns 1 for identical strings', () => {
@@ -97,5 +97,60 @@ describe('deduplicate', () => {
     // With threshold 0.0, everything dedupes
     const loose = deduplicate(entries, 0.0);
     expect(loose).toHaveLength(1);
+  });
+
+  it('deduplicates prefix matches from truncation upgrade (150→500 chars)', () => {
+    const shortText = '- ' + 'Decided to use React for the frontend framework because it provides excellent SSR support and has a very large ecosystem of libraries'.slice(0, 150) + '...';
+    const longText = '- Decided to use React for the frontend framework because it provides excellent SSR support and has a very large ecosystem of libraries';
+    const result = deduplicate([{ text: shortText }, { text: longText }]);
+    expect(result).toHaveLength(1);
+    // Should keep the longer entry (more context)
+    expect(result[0]!.text).toBe(longText);
+  });
+
+  it('keeps longer entry when old truncated prefix appears first', () => {
+    const oldEntry = '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output...';
+    const newEntry = '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output and automatic declaration files';
+    const result = deduplicate([{ text: oldEntry }, { text: newEntry }]);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.text).toBe(newEntry);
+  });
+
+  it('keeps longer entry when new entry appears first', () => {
+    const newEntry = '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output and automatic declaration files';
+    const oldEntry = '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output...';
+    const result = deduplicate([{ text: newEntry }, { text: oldEntry }]);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.text).toBe(newEntry);
+  });
+});
+
+describe('isPrefixMatch', () => {
+  it('matches truncated prefix with ellipsis against full text', () => {
+    const truncated = '- Decided to use React for SSR...';
+    const full = '- Decided to use React for SSR and static generation';
+    expect(isPrefixMatch(truncated, full)).toBe(true);
+  });
+
+  it('matches without bullet prefix', () => {
+    const a = 'Decided to use React for SSR...';
+    const b = 'Decided to use React for SSR and static generation';
+    expect(isPrefixMatch(a, b)).toBe(true);
+  });
+
+  it('rejects short texts below minimum length', () => {
+    expect(isPrefixMatch('- short', '- short text')).toBe(false);
+  });
+
+  it('rejects unrelated entries', () => {
+    const a = '- Use TypeScript strict mode for safety';
+    const b = '- Set up CI pipeline with GitHub Actions';
+    expect(isPrefixMatch(a, b)).toBe(false);
+  });
+
+  it('is case-insensitive', () => {
+    const a = '- Decided to use REACT for SSR...';
+    const b = '- decided to use react for ssr and more';
+    expect(isPrefixMatch(a, b)).toBe(true);
   });
 });
