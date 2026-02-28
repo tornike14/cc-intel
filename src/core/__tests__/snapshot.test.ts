@@ -120,4 +120,24 @@ describe('extractSnapshot', () => {
     expect(snapshot.metadata.phaseDistribution[SessionPhase.Implementation]).toBe(2);
     expect(snapshot.metadata.extractedAt).toBeTruthy();
   });
+
+  it('excludes boilerplate messages from snapshot entries', () => {
+    const segmented = emptySegmented();
+    const boilerplate =
+      'This session is being continued from a previous conversation that ran out of context. We decided to use TypeScript and must keep backward compatibility.';
+
+    segmented[SessionPhase.Goal] = [
+      makeScoredMessage(boilerplate, 10, [SignalCategory.Decision, SignalCategory.Constraint]),
+      makeScoredMessage('Build a CLI tool for context monitoring', 5),
+    ];
+
+    const snapshot = extractSnapshot(segmented);
+    // Boilerplate excluded from entries despite high score and signals
+    expect(snapshot.sections[SnapshotSection.ProjectGoal]).toHaveLength(1);
+    expect(snapshot.sections[SnapshotSection.ProjectGoal][0]!.text).toContain('CLI tool');
+    expect(snapshot.sections[SnapshotSection.KeyDecisions]).toHaveLength(0);
+    expect(snapshot.sections[SnapshotSection.Constraints]).toHaveLength(0);
+    // But metadata still counts all messages (including boilerplate)
+    expect(snapshot.metadata.messageCount).toBe(2);
+  });
 });
