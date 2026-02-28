@@ -4,3 +4,7 @@ export * from './segmenter.js';
 export * from './snapshot.js';
 export * from './dedup.js';
 export * from './risk.js';
+export * from './memory-parser.js';
+export * from './memory-serializer.js';
+export * from './memory-budget.js';
+export * from './memory-merger.js';
