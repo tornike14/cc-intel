@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
 - Native Claude Code session parser — reads real session files from `~/.claude/projects/`
 - Session auto-discovery: commands find the latest session automatically when no file is specified
 - Positional `[file]` argument on `snapshot`, `risk`, and `preserve` commands
+- `cc-intel projects` command — interactive project picker with arrow-key selection
+- `cc-intel projects --json` for CI-friendly project listing
+- Filesystem-assisted path decoding for project names with hyphens (e.g., `cc-intel`)
 
 ### Changed
 
@@ -20,11 +23,13 @@ All notable changes to this project will be documented in this file.
 - Updated help text with documentation and issue links
 - Zero-argument usage is now the primary CLI pattern (`cc-intel snapshot` instead of `cc-intel snapshot --input session.jsonl`)
 - Simplified README command examples to lead with auto-discovery
+- Improved error messages when no session is found — suggests `cc-intel projects` as alternative
 
 ### Fixed
 
 - Budget enforcement infinite loop when `totalLines - maxLines = 1`
 - Duplicate overflow filenames when same section overflows multiple times on same date
+- Windows path encoding for drive letters (e.g., `C:\Users\foo` encodes correctly)
 
 ## [0.1.0] - 2026-02-28
 

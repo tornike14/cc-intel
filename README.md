@@ -42,6 +42,7 @@ cc-intel snapshot        # extract knowledge from latest session
 cc-intel risk            # assess compaction risk
 cc-intel preserve        # save knowledge to MEMORY.md
 cc-intel status          # check MEMORY.md health
+cc-intel projects        # pick a project interactively
 ```
 
 No flags needed — cc-intel auto-discovers the latest session from `~/.claude/projects/`.
@@ -101,6 +102,21 @@ cc-intel preserve -m ./MEMORY.md           # custom MEMORY.md path
 | `-m, --memory <path>` | MEMORY.md path (default: `~/.claude/MEMORY.md`) |
 | `--dry-run` | Preview changes without writing |
 | `--max-lines <n>` | Max MEMORY.md lines (default: `200`) |
+
+### `cc-intel projects`
+
+Browse all Claude Code projects and run a command on one interactively. Useful when you're not inside a project directory.
+
+```bash
+cc-intel projects                # interactive arrow-key picker
+cc-intel projects --json         # list all projects as JSON
+```
+
+In interactive mode, you select a project and then choose a command (snapshot, risk, or preserve) to run on it. The `--json` flag outputs a machine-readable project list for scripting.
+
+| Option | Description |
+|--------|-------------|
+| `--json` | Output project list as JSON (non-interactive) |
 
 ### `cc-intel status`
 
