@@ -1,9 +1,12 @@
 import { Command } from 'commander';
+import { loadConfig } from '../core/config-loader.js';
 import { createSnapshotCommand } from './commands/snapshot.js';
 import { createRiskCommand } from './commands/risk.js';
 import { createPreserveCommand } from './commands/preserve.js';
 import { createStatusCommand } from './commands/status.js';
 import { HELP_HEADER, HELP_FOOTER } from './branding.js';
+
+const config = await loadConfig();
 
 const program = new Command();
 
@@ -13,8 +16,8 @@ program.addHelpText('before', HELP_HEADER);
 program.addHelpText('after', HELP_FOOTER);
 
 program.addCommand(createSnapshotCommand());
-program.addCommand(createRiskCommand());
-program.addCommand(createPreserveCommand());
+program.addCommand(createRiskCommand(config));
+program.addCommand(createPreserveCommand(config));
 program.addCommand(createStatusCommand());
 
 program.parse();
