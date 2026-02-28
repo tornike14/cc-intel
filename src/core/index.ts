@@ -3,3 +3,4 @@ export * from './signals.js';
 export * from './segmenter.js';
 export * from './snapshot.js';
 export * from './dedup.js';
+export * from './risk.js';
