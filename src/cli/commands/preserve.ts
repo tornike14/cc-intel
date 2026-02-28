@@ -8,6 +8,7 @@ import { extractSnapshot } from '../../core/snapshot.js';
 import { parseMemoryDocument } from '../../core/memory-parser.js';
 import { serializeMemoryDocument } from '../../core/memory-serializer.js';
 import { mergeIntoMemory } from '../../core/memory-merger.js';
+import { discoverLatestSession } from '../../core/session-discovery.js';
 import { safeWriteFile, safeReadFile, ensureDir } from '../../utils/safe-fs.js';
 import { createLogger } from '../../utils/logger.js';
 
@@ -18,21 +19,26 @@ export function createPreserveCommand(config?: CcIntelConfig): Command {
 
   return new Command('preserve')
     .description('Merge session knowledge into MEMORY.md with deduplication')
-    .option('-i, --input <path>', 'Session file path (default: stdin)')
+    .argument('[file]', 'Session file (default: latest from current project)')
+    .option('-i, --input <path>', 'Session file path')
     .option('-f, --format <fmt>', 'Input format: auto, jsonl, markdown', 'auto')
     .option('-m, --memory <path>', 'MEMORY.md path', resolveDefaultMemoryPath())
     .option('--dry-run', 'Preview changes without writing')
     .option('--max-lines <n>', 'Max MEMORY.md lines', defaultMaxLines)
     .action(
-      async (options: {
-        input?: string;
-        format: string;
-        memory: string;
-        dryRun?: boolean;
-        maxLines: string;
-      }) => {
+      async (
+        file: string | undefined,
+        options: {
+          input?: string;
+          format: string;
+          memory: string;
+          dryRun?: boolean;
+          maxLines: string;
+        },
+      ) => {
         // 1. Read session input
-        const input = options.input ? await fs.readFile(options.input, 'utf-8') : await readStdin();
+        const input = await resolveInput(file, options.input);
+        if (!input) return;
 
         // 2. Parse and extract snapshot
         const session = parseSession(input, options.format as 'auto' | 'jsonl' | 'markdown');
@@ -109,6 +115,27 @@ export function createPreserveCommand(config?: CcIntelConfig): Command {
 function resolveDefaultMemoryPath(): string {
   const home = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '.';
   return path.join(home, '.claude', 'MEMORY.md');
+}
+
+async function resolveInput(file?: string, inputFlag?: string): Promise<string> {
+  const filePath = file ?? inputFlag;
+  if (filePath) return fs.readFile(filePath, 'utf-8');
+
+  const discovered = await discoverLatestSession();
+  if (discovered) {
+    process.stderr.write(`Using session: ${discovered}\n`);
+    return fs.readFile(discovered, 'utf-8');
+  }
+
+  if (process.stdin.isTTY) {
+    process.stderr.write(
+      'Error: no session file found. Provide a file path or pipe input via stdin.\n',
+    );
+    process.exitCode = 1;
+    return '';
+  }
+
+  return readStdin();
 }
 
 function readStdin(): Promise<string> {

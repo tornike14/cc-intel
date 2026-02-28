@@ -4,16 +4,98 @@ import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger('session-parser');
 
-type SessionFormat = 'jsonl' | 'markdown' | 'auto';
+type SessionFormat = 'jsonl' | 'claude-code' | 'markdown' | 'auto';
 
 export function parseSession(input: string, format: SessionFormat = 'auto'): SessionData {
   const detected = format === 'auto' ? detectFormat(input) : format;
+  if (detected === 'claude-code') return parseClaudeCodeSession(input);
   return detected === 'jsonl' ? parseJsonlSession(input) : parseMarkdownSession(input);
 }
 
-export function detectFormat(input: string): 'jsonl' | 'markdown' {
+export function detectFormat(input: string): 'jsonl' | 'claude-code' | 'markdown' {
   const firstLine = input.trimStart().split('\n')[0]?.trim() ?? '';
-  return firstLine.startsWith('{') ? 'jsonl' : 'markdown';
+  if (!firstLine.startsWith('{')) return 'markdown';
+
+  // Check if this is native Claude Code JSONL (has a "type" field)
+  try {
+    const parsed = JSON.parse(firstLine) as Record<string, unknown>;
+    if (
+      typeof parsed['type'] === 'string' &&
+      ['user', 'assistant', 'queue-operation', 'system', 'progress', 'file-history-snapshot'].includes(
+        parsed['type'],
+      )
+    ) {
+      return 'claude-code';
+    }
+  } catch {
+    // Fall through to simple JSONL
+  }
+
+  return 'jsonl';
+}
+
+/** Parse native Claude Code session JSONL (undocumented internal format). */
+export function parseClaudeCodeSession(input: string): SessionData {
+  const messages: SessionMessage[] = [];
+  const lines = input.split('\n').filter((l) => l.trim().length > 0);
+
+  for (let i = 0; i < lines.length; i++) {
+    try {
+      const parsed = JSON.parse(lines[i]!) as Record<string, unknown>;
+      const lineType = parsed['type'];
+
+      if (lineType !== 'user' && lineType !== 'assistant') continue;
+
+      const message = parsed['message'] as Record<string, unknown> | undefined;
+      if (!message) continue;
+
+      const timestamp =
+        typeof parsed['timestamp'] === 'string' ? parsed['timestamp'] : undefined;
+
+      if (lineType === 'user') {
+        // User messages: content is a string for text, array for tool_results
+        if (typeof message['content'] !== 'string') continue;
+        messages.push({
+          role: 'human',
+          content: message['content'],
+          timestamp,
+        });
+      } else {
+        // Assistant messages: content is an array of content blocks
+        const contentBlocks = message['content'];
+        if (!Array.isArray(contentBlocks)) continue;
+
+        const textParts: string[] = [];
+        for (const block of contentBlocks) {
+          if (
+            typeof block === 'object' &&
+            block !== null &&
+            (block as Record<string, unknown>)['type'] === 'text' &&
+            typeof (block as Record<string, unknown>)['text'] === 'string'
+          ) {
+            textParts.push((block as Record<string, unknown>)['text'] as string);
+          }
+        }
+
+        // Skip assistant messages with no text content (tool-use only)
+        if (textParts.length === 0) continue;
+
+        messages.push({
+          role: 'assistant',
+          content: textParts.join('\n'),
+          timestamp,
+        });
+      }
+    } catch {
+      // Skip malformed lines silently — native sessions have many line types
+    }
+  }
+
+  if (messages.length === 0 && lines.length > 0) {
+    throw new ParseError('No valid messages found in Claude Code session');
+  }
+
+  return { messages };
 }
 
 export function parseJsonlSession(input: string): SessionData {

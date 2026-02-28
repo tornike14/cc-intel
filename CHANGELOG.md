@@ -9,12 +9,22 @@ All notable changes to this project will be documented in this file.
 - ASCII art branding in CLI help output (`cc-intel --help`)
 - Post-install banner displayed after `npm install`
 - Expanded npm keywords for better discoverability
+- Native Claude Code session parser — reads real session files from `~/.claude/projects/`
+- Session auto-discovery: commands find the latest session automatically when no file is specified
+- Positional `[file]` argument on `snapshot`, `risk`, and `preserve` commands
 
 ### Changed
 
 - Improved command descriptions for clarity
 - Overhauled README with marketing copy and structured documentation
 - Updated help text with documentation and issue links
+- Zero-argument usage is now the primary CLI pattern (`cc-intel snapshot` instead of `cc-intel snapshot --input session.jsonl`)
+- Simplified README command examples to lead with auto-discovery
+
+### Fixed
+
+- Budget enforcement infinite loop when `totalLines - maxLines = 1`
+- Duplicate overflow filenames when same section overflows multiple times on same date
 
 ## [0.1.0] - 2026-02-28
 

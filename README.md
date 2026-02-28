@@ -33,8 +33,18 @@ cc-intel monitors your sessions and extracts the signals that matter — decisio
 
 ```bash
 npm install -g cc-intel
-cc-intel --help
 ```
+
+Run from inside any project with Claude Code sessions:
+
+```bash
+cc-intel snapshot        # extract knowledge from latest session
+cc-intel risk            # assess compaction risk
+cc-intel preserve        # save knowledge to MEMORY.md
+cc-intel status          # check MEMORY.md health
+```
+
+No flags needed — cc-intel auto-discovers the latest session from `~/.claude/projects/`.
 
 ## Commands
 
@@ -43,15 +53,15 @@ cc-intel --help
 Extract structured knowledge from a session transcript.
 
 ```bash
-cc-intel snapshot --input session.jsonl
-cc-intel snapshot --input session.jsonl --json
-cc-intel snapshot --input session.jsonl --output snapshot.md
-cat session.jsonl | cc-intel snapshot
+cc-intel snapshot                          # auto-discover latest session
+cc-intel snapshot path/to/session.jsonl    # explicit file
+cc-intel snapshot --json                   # JSON output
+cc-intel snapshot -o snapshot.md           # write to file
 ```
 
 | Option | Description |
 |--------|-------------|
-| `-i, --input <path>` | Session file path (default: stdin) |
+| `[file]` | Session file path (default: auto-discover latest) |
 | `-f, --format <fmt>` | Input format: `auto`, `jsonl`, `markdown` (default: `auto`) |
 | `-o, --output <path>` | Output file path (default: stdout) |
 | `--json` | Output as JSON instead of markdown |
@@ -61,13 +71,14 @@ cat session.jsonl | cc-intel snapshot
 Assess context window usage and compaction risk. Exits with code 1 for High/Critical risk — useful in CI.
 
 ```bash
-cc-intel risk --input session.jsonl
-cc-intel risk --input session.jsonl --json --threshold 150000
+cc-intel risk                              # auto-discover latest session
+cc-intel risk path/to/session.jsonl        # explicit file
+cc-intel risk --json --threshold 150000    # custom threshold
 ```
 
 | Option | Description |
 |--------|-------------|
-| `-i, --input <path>` | Session file path (default: stdin) |
+| `[file]` | Session file path (default: auto-discover latest) |
 | `-f, --format <fmt>` | Input format: `auto`, `jsonl`, `markdown` (default: `auto`) |
 | `--json` | Output as JSON |
 | `--threshold <n>` | Max context tokens (default: `200000`) |
@@ -77,14 +88,15 @@ cc-intel risk --input session.jsonl --json --threshold 150000
 Merge session knowledge into MEMORY.md with deduplication and budget enforcement.
 
 ```bash
-cc-intel preserve --input session.jsonl --dry-run
-cc-intel preserve --input session.jsonl
-cc-intel preserve --input session.jsonl --memory ./MEMORY.md
+cc-intel preserve                          # auto-discover, write to MEMORY.md
+cc-intel preserve --dry-run                # preview without writing
+cc-intel preserve path/to/session.jsonl    # explicit file
+cc-intel preserve -m ./MEMORY.md           # custom MEMORY.md path
 ```
 
 | Option | Description |
 |--------|-------------|
-| `-i, --input <path>` | Session file path (default: stdin) |
+| `[file]` | Session file path (default: auto-discover latest) |
 | `-f, --format <fmt>` | Input format: `auto`, `jsonl`, `markdown` (default: `auto`) |
 | `-m, --memory <path>` | MEMORY.md path (default: `~/.claude/MEMORY.md`) |
 | `--dry-run` | Preview changes without writing |
@@ -106,15 +118,31 @@ cc-intel status --memory ./MEMORY.md --json
 
 ---
 
+## Session Auto-Discovery
+
+When no file is specified, cc-intel automatically finds the latest session:
+
+1. Resolves the git root of the current directory
+2. Looks in `~/.claude/projects/<project-dir>/` for `.jsonl` files
+3. Uses the most recently modified session
+
+This works with native Claude Code session files — the internal JSONL format that Claude Code writes during conversations. The parser handles user messages, assistant responses with mixed text/tool-use blocks, and gracefully skips tool results and operational entries.
+
+---
+
 ## Session Input Formats
 
-### JSONL
+### Native Claude Code (auto-detected)
+
+Session files written by Claude Code at `~/.claude/projects/`. Detected automatically — no configuration needed.
+
+### Simple JSONL
 
 One JSON object per line with `role` and `content` fields:
 
 ```jsonl
 {"role":"human","content":"Build a REST API with Express"}
-{"role":"assistant","content":"I'll set up Express with TypeScript. We decided to use Knex for migrations."}
+{"role":"assistant","content":"I'll set up Express with TypeScript."}
 ```
 
 ### Markdown
@@ -123,7 +151,7 @@ Alternating `Human:` and `Assistant:` prefixes:
 
 ```
 Human: Build a REST API with Express
-Assistant: I'll set up Express with TypeScript. We decided to use Knex for migrations.
+Assistant: I'll set up Express with TypeScript.
 ```
 
 ---
@@ -211,6 +239,7 @@ cc-intel exports its core functions for programmatic use:
 ```typescript
 import {
   parseSession,
+  discoverLatestSession,
   segmentSession,
   extractSnapshot,
   parseMemoryDocument,

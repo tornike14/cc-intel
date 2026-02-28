@@ -9,4 +9,5 @@ export * from './memory-serializer.js';
 export * from './memory-budget.js';
 export * from './memory-merger.js';
 export * from './session-parser.js';
+export * from './session-discovery.js';
 export * from './config-loader.js';
