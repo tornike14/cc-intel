@@ -43,7 +43,12 @@ export function mergeIntoMemory(
     const existingEntries = existingLines
       .filter((l) => l.trim().length > 0)
       .map((l) => ({ text: l }));
-    const newDedupEntries = newEntries.map((e) => ({ text: `- ${e.text.substring(0, 150)}` }));
+    const maxEntryLen = 500;
+    const newDedupEntries = newEntries.map((e) => {
+      const truncated =
+        e.text.length > maxEntryLen ? e.text.substring(0, maxEntryLen) + '...' : e.text;
+      return { text: `- ${truncated}` };
+    });
 
     const combined = [...existingEntries, ...newDedupEntries];
     const beforeCount = combined.length;

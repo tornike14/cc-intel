@@ -232,4 +232,33 @@ describe('mergeIntoMemory', () => {
     const { updatedDoc } = mergeIntoMemory(doc, snapshot);
     expect(updatedDoc.totalLines).toBeGreaterThan(0);
   });
+
+  it('truncates long entries at 500 chars with ellipsis', () => {
+    const doc = parseMemoryDocument('');
+    const longText = 'x'.repeat(600);
+    const snapshot = makeSnapshot({
+      [SnapshotSection.KeyDecisions]: [{ text: longText, score: 5 }],
+    });
+
+    const { updatedDoc } = mergeIntoMemory(doc, snapshot);
+    const decisions = updatedDoc.sections[MemorySection.RecentDecisions].lines;
+    const entry = decisions.find((l) => l.includes('xxx'))!;
+    // "- " prefix (2) + 500 chars + "..." (3) = 505 total
+    expect(entry.length).toBe(505);
+    expect(entry.endsWith('...')).toBe(true);
+  });
+
+  it('keeps short entries intact without ellipsis', () => {
+    const doc = parseMemoryDocument('');
+    const shortText = 'Use Commander for CLI parsing';
+    const snapshot = makeSnapshot({
+      [SnapshotSection.KeyDecisions]: [{ text: shortText, score: 5 }],
+    });
+
+    const { updatedDoc } = mergeIntoMemory(doc, snapshot);
+    const decisions = updatedDoc.sections[MemorySection.RecentDecisions].lines;
+    const entry = decisions.find((l) => l.includes('Commander'))!;
+    expect(entry).toBe(`- ${shortText}`);
+    expect(entry.endsWith('...')).toBe(false);
+  });
 });

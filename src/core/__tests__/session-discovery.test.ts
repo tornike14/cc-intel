@@ -7,6 +7,7 @@ import {
   decodeProjectPath,
   listProjects,
   discoverLatestSessionInProject,
+  memoryPathFromSession,
 } from '../session-discovery.js';
 
 describe('encodeProjectPath', () => {
@@ -223,5 +224,21 @@ describe('discoverLatestSessionInProject', () => {
   it('returns null for non-existent directory', async () => {
     const latest = await discoverLatestSessionInProject('/nonexistent/path');
     expect(latest).toBeNull();
+  });
+});
+
+describe('memoryPathFromSession', () => {
+  it('derives memory path from session file path', () => {
+    const sessionPath = '/home/user/.claude/projects/-Users-foo-bar/abc123.jsonl';
+    expect(memoryPathFromSession(sessionPath)).toBe(
+      '/home/user/.claude/projects/-Users-foo-bar/memory/MEMORY.md',
+    );
+  });
+
+  it('handles nested project directories', () => {
+    const sessionPath = '/Users/nizhara/.claude/projects/-Users-nizhara-Desktop-cc-intel/cd063.jsonl';
+    expect(memoryPathFromSession(sessionPath)).toBe(
+      '/Users/nizhara/.claude/projects/-Users-nizhara-Desktop-cc-intel/memory/MEMORY.md',
+    );
   });
 });

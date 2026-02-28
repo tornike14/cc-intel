@@ -14,7 +14,7 @@ import { parseMemoryDocument } from '../../core/memory-parser.js';
 import { serializeMemoryDocument } from '../../core/memory-serializer.js';
 import { mergeIntoMemory } from '../../core/memory-merger.js';
 import { DEFAULT_MEMORY_BUDGET, RiskLevel, type CcIntelConfig } from '../../models/index.js';
-import { safeWriteFile, safeReadFile } from '../../utils/safe-fs.js';
+import { safeWriteFile, safeReadFile, ensureDir } from '../../utils/safe-fs.js';
 import {
   formatSnapshotAsMarkdown,
 } from '../formatters/snapshot-formatter.js';
@@ -83,13 +83,14 @@ export function createProjectsCommand(config?: CcIntelConfig): Command {
       process.stderr.write(`\nUsing session: ${sessionPath}\n\n`);
       const input = await fs.readFile(sessionPath, 'utf-8');
 
-      await runSubcommand(selectedCommand, input, config);
+      await runSubcommand(selectedCommand, input, selectedProject.projectDir, config);
     });
 }
 
 async function runSubcommand(
   command: string,
   input: string,
+  projectDir: string,
   config?: CcIntelConfig,
 ): Promise<void> {
   switch (command) {
@@ -115,8 +116,7 @@ async function runSubcommand(
       const segmented = segmentSession(session.messages);
       const snapshot = extractSnapshot(segmented);
 
-      const home = process.env['HOME'] ?? process.env['USERPROFILE'] ?? '.';
-      const memoryPath = path.join(home, '.claude', 'MEMORY.md');
+      const memoryPath = path.join(projectDir, 'memory', 'MEMORY.md');
 
       let existingContent = '';
       let existingMtime: number | undefined;
@@ -137,6 +137,7 @@ async function runSubcommand(
       );
 
       const serialized = serializeMemoryDocument(updatedDoc);
+      await ensureDir(path.dirname(memoryPath));
       await safeWriteFile(memoryPath, serialized, existingMtime);
       process.stdout.write(`Preserved ${entriesAdded} entries to ${memoryPath}\n`);
       if (entriesDeduplicated > 0) {
