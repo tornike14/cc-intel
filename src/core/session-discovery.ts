@@ -149,27 +149,31 @@ export async function listProjects(): Promise<ProjectInfo[]> {
   }
 
   const entries = await fs.readdir(projectsRoot, { withFileTypes: true });
-  const projects: ProjectInfo[] = [];
+  const dirs = entries.filter((e) => e.isDirectory());
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
+  // Scan all projects in parallel for better performance with many projects
+  const results = await Promise.all(
+    dirs.map(async (entry): Promise<ProjectInfo | null> => {
+      const projectDir = path.join(projectsRoot, entry.name);
+      const [{ sessionCount, lastModifiedMs }, decodedPath] = await Promise.all([
+        scanSessionFiles(projectDir),
+        decodeProjectPath(entry.name),
+      ]);
 
-    const projectDir = path.join(projectsRoot, entry.name);
-    const { sessionCount, lastModifiedMs } = await scanSessionFiles(projectDir);
+      if (sessionCount === 0) return null;
 
-    if (sessionCount === 0) continue;
+      return {
+        dirName: entry.name,
+        decodedPath,
+        name: path.basename(decodedPath),
+        sessionCount,
+        lastModifiedMs,
+        projectDir,
+      };
+    }),
+  );
 
-    const decodedPath = await decodeProjectPath(entry.name);
-    projects.push({
-      dirName: entry.name,
-      decodedPath,
-      name: path.basename(decodedPath),
-      sessionCount,
-      lastModifiedMs,
-      projectDir,
-    });
-  }
-
+  const projects = results.filter((p): p is ProjectInfo => p !== null);
   projects.sort((a, b) => b.lastModifiedMs - a.lastModifiedMs);
   return projects;
 }

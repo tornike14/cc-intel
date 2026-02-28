@@ -87,12 +87,15 @@ export function parseClaudeCodeSession(input: string): SessionData {
         });
       }
     } catch {
-      // Skip malformed lines silently — native sessions have many line types
+      logger.warn(`Skipping malformed Claude Code line ${i + 1}`);
     }
   }
 
   if (messages.length === 0 && lines.length > 0) {
-    throw new ParseError('No valid messages found in Claude Code session');
+    throw new ParseError(
+      `No valid messages found in Claude Code session (${lines.length} lines scanned). ` +
+        'The session file may use an unsupported format version.',
+    );
   }
 
   return { messages };

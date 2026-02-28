@@ -37,6 +37,8 @@ All notable changes to this project will be documented in this file.
 - `projects` command preserve case now writes to the selected project's memory directory
 - Standardized home directory resolution on `os.homedir()` across all CLI commands
 - Entry truncation increased from 150 to 500 characters with ellipsis indicator
+- Claude Code session parser now logs warnings for skipped lines and includes line count in error messages
+- `listProjects()` now scans projects in parallel for better performance with many projects
 - Windows path encoding for drive letters (e.g., `C:\Users\foo` encodes correctly)
 
 ## [0.1.0] - 2026-02-28
