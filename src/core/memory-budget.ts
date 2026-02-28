@@ -49,6 +49,7 @@ export function enforceBudget(
   let totalLines = Object.values(trimmedSections).reduce((sum, s) => sum + s.lineCount, 0);
 
   // Enforce global maxLines cap by trimming largest sections first
+  const overflowCounter: Record<string, number> = {};
   while (totalLines > budget.maxLines) {
     const sections = Object.values(MemorySection);
     const largest = sections.reduce((max, s) =>
@@ -58,22 +59,33 @@ export function enforceBudget(
     const data = trimmedSections[largest];
     if (data.lineCount <= 1) break; // Cannot trim further
 
-    const newLimit = Math.max(1, data.lineCount - (totalLines - budget.maxLines));
+    const excess = totalLines - budget.maxLines;
+    // Account for the +1 overflow summary line that replaces removed content
+    const newLimit = Math.max(1, data.lineCount - excess - 1);
+
+    // If we can't actually shrink the section, stop to avoid infinite loop
+    if (newLimit >= data.lineCount - 1) break;
+
     const keptLines = data.lines.slice(0, newLimit);
     const overflowLines = data.lines.slice(newLimit);
 
     if (overflowLines.length > 0) {
       const dateStr = new Date().toISOString().split('T')[0]!;
+      const countKey = `${largest}-${dateStr}`;
+      overflowCounter[countKey] = (overflowCounter[countKey] ?? 0) + 1;
+      const suffix = overflowCounter[countKey]! > 1 ? `-${overflowCounter[countKey]}` : '';
+      const filename = `${largest}-${dateStr}${suffix}.md`;
+
       overflowActions.push({
         section: largest,
-        summaryBullet: `- See overflow: ${largest}-${dateStr}.md`,
-        topicFileLink: `${largest}-${dateStr}.md`,
+        summaryBullet: `- See overflow: ${filename}`,
+        topicFileLink: filename,
         originalContent: overflowLines.join('\n'),
       });
 
       trimmedSections[largest] = {
         ...data,
-        lines: [...keptLines, `- See overflow: ${largest}-${dateStr}.md`],
+        lines: [...keptLines, `- See overflow: ${filename}`],
         lineCount: keptLines.length + 1,
       };
     }
