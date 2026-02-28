@@ -49,7 +49,12 @@ export function enforceBudget(
   let totalLines = Object.values(trimmedSections).reduce((sum, s) => sum + s.lineCount, 0);
 
   // Enforce global maxLines cap by trimming largest sections first
+  // Seed counter with filenames already emitted by section-limit pass
   const overflowCounter: Record<string, number> = {};
+  for (const action of overflowActions) {
+    const key = action.topicFileLink.replace(/\.md$/, '');
+    overflowCounter[key] = (overflowCounter[key] ?? 0) + 1;
+  }
   while (totalLines > budget.maxLines) {
     const sections = Object.values(MemorySection);
     const largest = sections.reduce((max, s) =>

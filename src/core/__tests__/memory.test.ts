@@ -152,6 +152,31 @@ describe('enforceBudget', () => {
     const uniqueFilenames = new Set(filenames);
     expect(uniqueFilenames.size).toBe(filenames.length);
   });
+
+  it('avoids filename collision between section-limit and global overflow passes', () => {
+    // Create a section that exceeds its section limit AND total exceeds maxLines
+    const lines = Array.from({ length: 100 }, (_, i) => `- Decision ${i}`);
+    const content = `## Recent Decisions\n\n${lines.join('\n')}\n`;
+    const doc = parseMemoryDocument(content);
+
+    const budget = {
+      maxLines: 10,
+      sectionLimits: {
+        [MemorySection.PinnedEssentials]: 80,
+        [MemorySection.IndexLinks]: 40,
+        [MemorySection.RecentDecisions]: 30, // section limit triggers first pass
+      },
+    };
+
+    const { overflowActions } = enforceBudget(doc, budget);
+    // Should have at least 2 overflows: one from section-limit pass, one from global pass
+    expect(overflowActions.length).toBeGreaterThanOrEqual(2);
+
+    // All filenames must be unique — no collision between passes
+    const filenames = overflowActions.map((a) => a.topicFileLink);
+    const uniqueFilenames = new Set(filenames);
+    expect(uniqueFilenames.size).toBe(filenames.length);
+  });
 });
 
 function makeSnapshot(entries: Partial<Record<SnapshotSection, SnapshotEntry[]>>): Snapshot {

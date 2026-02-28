@@ -23,6 +23,7 @@ export function createSnapshotCommand(): Command {
         options: { input?: string; format: string; output?: string; json?: boolean },
       ) => {
         const input = await resolveInput(file, options.input);
+        if (!input) return;
 
         const session = parseSession(input, options.format as 'auto' | 'jsonl' | 'markdown');
         const segmented = segmentSession(session.messages);
