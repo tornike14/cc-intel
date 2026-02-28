@@ -23,8 +23,8 @@ describe('preserve integration', () => {
 
   it('creates MEMORY.md from session data', async () => {
     const sessionInput = [
-      '{"role":"human","content":"We decided to use TypeScript for type safety"}',
-      '{"role":"assistant","content":"Good choice. TODO: add linting configuration"}',
+      '{"role":"human","content":"Set up the project with TypeScript"}',
+      '{"role":"assistant","content":"We decided to use TypeScript for strict type safety. TODO: add linting configuration"}',
     ].join('\n');
 
     const session = parseSession(sessionInput);
@@ -39,7 +39,6 @@ describe('preserve integration', () => {
     await safeWriteFile(memoryPath, serialized);
 
     const written = await fs.readFile(memoryPath, 'utf-8');
-    expect(written).toContain('Pinned Essentials');
     expect(written).toContain('Recent Decisions');
   });
 

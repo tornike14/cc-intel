@@ -8,11 +8,21 @@ const SECTION_TITLES: Record<SnapshotSection, string> = {
   [SnapshotSection.OpenTasks]: 'Open Tasks',
 };
 
-/** Truncate to first line only, capped at maxLen chars */
+/** Truncate text at a sentence boundary, falling back to word boundary */
 function truncateEntry(text: string, maxLen: number): string {
   const firstLine = text.split('\n')[0] ?? text;
   if (firstLine.length <= maxLen) return firstLine;
-  return firstLine.substring(0, maxLen) + '...';
+
+  // Try to cut at sentence boundary (. ! ?) followed by space or end
+  const candidate = firstLine.substring(0, maxLen);
+  const sentenceEnd = candidate.search(/[.!?](?:\s|$)/);
+  if (sentenceEnd > 30) return firstLine.substring(0, sentenceEnd + 1);
+
+  // Fall back to word boundary
+  const lastSpace = candidate.lastIndexOf(' ');
+  if (lastSpace > 30) return firstLine.substring(0, lastSpace) + '...';
+
+  return candidate + '...';
 }
 
 export function formatSnapshotAsMarkdown(snapshot: Snapshot): string {

@@ -152,8 +152,9 @@ describe('E2E: full pipeline', () => {
     const { updatedDoc } = mergeIntoMemory(emptyDoc, snapshot);
     const serialized = serializeMemoryDocument(updatedDoc);
 
-    expect(serialized).toContain('## Pinned Essentials');
     expect(serialized).toContain('## Recent Decisions');
+    // Pinned Essentials only appears if assistant messages exist in Goal phase.
+    // In this 4-message session, the Goal-phase message is human (filtered).
     // Index Links only appears if artifact signals are detected — not guaranteed
     // for short sessions without implementation artifacts
   });
