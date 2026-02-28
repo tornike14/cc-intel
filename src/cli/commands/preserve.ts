@@ -86,13 +86,20 @@ export function createPreserveCommand(config?: CcIntelConfig): Command {
         const serialized = serializeMemoryDocument(updatedDoc);
 
         if (options.dryRun) {
-          process.stdout.write('=== DRY RUN - No files will be written ===\n\n');
-          process.stdout.write(serialized);
-          process.stdout.write(`\n--- Stats ---\n`);
-          process.stdout.write(`Entries added: ${entriesAdded}\n`);
-          process.stdout.write(`Entries deduplicated: ${entriesDeduplicated}\n`);
-          process.stdout.write(`Overflow actions: ${overflowActions.length}\n`);
-          process.stdout.write(`Total lines: ${updatedDoc.totalLines}\n`);
+          const indent = (text: string) =>
+            text
+              .split('\n')
+              .map((l) => '    ' + l)
+              .join('\n');
+
+          process.stdout.write('\n  === DRY RUN - No files will be written ===\n');
+          process.stdout.write('  ' + '-'.repeat(50) + '\n\n');
+          process.stdout.write(indent(serialized));
+          process.stdout.write('\n\n  ' + '-'.repeat(50) + '\n');
+          process.stdout.write(`  Entries added: ${entriesAdded}\n`);
+          process.stdout.write(`  Entries deduplicated: ${entriesDeduplicated}\n`);
+          process.stdout.write(`  Overflow actions: ${overflowActions.length}\n`);
+          process.stdout.write(`  Total lines: ${updatedDoc.totalLines}\n\n`);
           return;
         }
 
