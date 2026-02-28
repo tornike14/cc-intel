@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import { parseSession } from '../../core/session-parser.js';
 import { segmentSession } from '../../core/segmenter.js';
 import { extractSnapshot } from '../../core/snapshot.js';
+import { discoverLatestSession } from '../../core/session-discovery.js';
 import {
   formatSnapshotAsMarkdown,
   formatSnapshotAsJson,
@@ -11,13 +12,17 @@ import {
 export function createSnapshotCommand(): Command {
   return new Command('snapshot')
     .description('Extract structured knowledge from a session transcript')
-    .option('-i, --input <path>', 'Session file path (default: stdin)')
+    .argument('[file]', 'Session file (default: latest from current project)')
+    .option('-i, --input <path>', 'Session file path')
     .option('-f, --format <fmt>', 'Input format: auto, jsonl, markdown', 'auto')
     .option('-o, --output <path>', 'Output file path (default: stdout)')
     .option('--json', 'Output as JSON instead of markdown')
     .action(
-      async (options: { input?: string; format: string; output?: string; json?: boolean }) => {
-        const input = options.input ? await fs.readFile(options.input, 'utf-8') : await readStdin();
+      async (
+        file: string | undefined,
+        options: { input?: string; format: string; output?: string; json?: boolean },
+      ) => {
+        const input = await resolveInput(file, options.input);
 
         const session = parseSession(input, options.format as 'auto' | 'jsonl' | 'markdown');
         const segmented = segmentSession(session.messages);
@@ -34,6 +39,28 @@ export function createSnapshotCommand(): Command {
         }
       },
     );
+}
+
+async function resolveInput(file?: string, inputFlag?: string): Promise<string> {
+  // Priority: positional arg > --input flag > auto-discover > stdin
+  const filePath = file ?? inputFlag;
+  if (filePath) return fs.readFile(filePath, 'utf-8');
+
+  const discovered = await discoverLatestSession();
+  if (discovered) {
+    process.stderr.write(`Using session: ${discovered}\n`);
+    return fs.readFile(discovered, 'utf-8');
+  }
+
+  if (process.stdin.isTTY) {
+    process.stderr.write(
+      'Error: no session file found. Provide a file path or pipe input via stdin.\n',
+    );
+    process.exitCode = 1;
+    return '';
+  }
+
+  return readStdin();
 }
 
 function readStdin(): Promise<string> {
