@@ -1,6 +1,6 @@
 {
   "name": "cc-intel",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Local-first CLI tool that strengthens Claude Code reliability by monitoring context, extracting knowledge, and preserving decisions into memory",
   "type": "module",
   "main": "./dist/index.js",
