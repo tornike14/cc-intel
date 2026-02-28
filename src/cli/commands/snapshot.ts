@@ -10,7 +10,7 @@ import {
 
 export function createSnapshotCommand(): Command {
   return new Command('snapshot')
-    .description('Extract a snapshot from a session transcript')
+    .description('Extract structured knowledge from a session transcript')
     .option('-i, --input <path>', 'Session file path (default: stdin)')
     .option('-f, --format <fmt>', 'Input format: auto, jsonl, markdown', 'auto')
     .option('-o, --output <path>', 'Output file path (default: stdout)')

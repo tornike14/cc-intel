@@ -6,7 +6,7 @@ import { safeReadFile } from '../../utils/safe-fs.js';
 
 export function createStatusCommand(): Command {
   return new Command('status')
-    .description('Show MEMORY.md health and budget utilization')
+    .description('Show MEMORY.md health, budget utilization, and section breakdown')
     .option('-m, --memory <path>', 'MEMORY.md path', resolveDefaultMemoryPath())
     .option('--json', 'Output as JSON')
     .action(async (options: { memory: string; json?: boolean }) => {

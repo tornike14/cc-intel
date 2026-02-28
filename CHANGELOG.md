@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-02-28
+
+### Added
+
+- ASCII art branding in CLI help output (`cc-intel --help`)
+- Post-install banner displayed after `npm install`
+- Expanded npm keywords for better discoverability
+
+### Changed
+
+- Improved command descriptions for clarity
+- Overhauled README with marketing copy and structured documentation
+- Updated help text with documentation and issue links
+
 ## [0.1.0] - 2026-02-28
 
 ### Added

@@ -14,7 +14,7 @@ const logger = createLogger('preserve');
 
 export function createPreserveCommand(): Command {
   return new Command('preserve')
-    .description('Extract session knowledge and merge into MEMORY.md')
+    .description('Merge session knowledge into MEMORY.md with deduplication')
     .option('-i, --input <path>', 'Session file path (default: stdin)')
     .option('-f, --format <fmt>', 'Input format: auto, jsonl, markdown', 'auto')
     .option('-m, --memory <path>', 'MEMORY.md path', resolveDefaultMemoryPath())
