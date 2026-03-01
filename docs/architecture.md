@@ -1,115 +1,110 @@
 # Architecture
 
-## Overview
-
-cc-intel is a local-first, deterministic pipeline that processes Claude Code session transcripts into structured memory. It runs entirely offline with no API calls or telemetry.
-
 ## Pipeline
 
 ```
-Session Input (JSONL/Markdown)
-  │
-  ├─ session-parser     → SessionData (messages array)
-  │
-  ├─ signals            → ScoredMessage[] (weighted signal detection)
-  │
-  ├─ segmenter          → SegmentedSession (4 phases)
-  │
-  ├─ snapshot           → Snapshot (5 sections)
-  │
-  ├─ dedup              → deduplicated entries (Dice coefficient)
-  │
-  ├─ memory-merger      → merged MemoryDocument
-  │
-  ├─ memory-budget      → enforced line limits + overflow
-  │
-  └─ memory-serializer  → MEMORY.md output
+Session Input (JSONL from ~/.claude/projects/)
+  |
+  +-- session-parser      -> SessionData (messages array)
+  |
+  +-- signals             -> ScoredMessage[] (weighted signal detection)
+  |
+  +-- llm-extractor       -> pre-filter top ~60 messages, send to Claude Haiku
+  |                          -> Snapshot (5 sections)
+  |
+  +-- dedup               -> deduplicated entries (Dice coefficient)
+  |
+  +-- memory-merger       -> merged MemoryDocument
+  |
+  +-- memory-budget       -> enforced line limits + overflow files
+  |
+  +-- memory-serializer   -> MEMORY.md output
 ```
 
-## Module Layout
+## Module layout
 
 ```
 src/
-├── models/          Type definitions and defaults
-│   ├── session.ts   SessionPhase, SessionMessage, SessionData
-│   ├── scoring.ts   SignalCategory, SignalMatch, ScoredMessage
-│   ├── snapshot.ts  SnapshotSection, Snapshot, SnapshotConfig
-│   ├── memory.ts    MemorySection, MemoryBudget, MemoryDocument
-│   ├── risk.ts      RiskLevel, RiskThresholds, ContextMetrics
-│   └── config.ts    CcIntelConfig with all defaults
-│
-├── core/            Processing engines
-│   ├── session-parser.ts     JSONL + markdown parsing
-│   ├── signal-patterns.ts    Regex patterns per category
-│   ├── signals.ts            Signal detection + message scoring
-│   ├── segmenter.ts          Phase-based session segmentation
-│   ├── snapshot.ts           Snapshot extraction from segments
-│   ├── dedup.ts              Dice coefficient deduplication
-│   ├── risk.ts               Token estimation + risk classification
-│   ├── memory-parser.ts      MEMORY.md → MemoryDocument
-│   ├── memory-serializer.ts  MemoryDocument → markdown string
-│   ├── memory-budget.ts      Section limit enforcement
-│   ├── memory-merger.ts      Snapshot → existing MEMORY.md merge
-│   └── config-loader.ts      .cc-intelrc.json loading
-│
-├── cli/             CLI layer
-│   ├── index.ts               Entry point (commander)
-│   ├── commands/
-│   │   ├── snapshot.ts        cc-intel snapshot
-│   │   ├── risk.ts            cc-intel risk
-│   │   ├── preserve.ts        cc-intel preserve
-│   │   └── status.ts          cc-intel status
-│   └── formatters/
-│       ├── snapshot-formatter.ts
-│       └── risk-formatter.ts
-│
-└── utils/           Shared utilities
-    ├── errors.ts    Custom error types
-    ├── logger.ts    Structured stderr logger
-    ├── text.ts      Text normalization helpers
-    └── safe-fs.ts   Atomic file operations with locking
++-- models/          Type definitions and defaults
+|   +-- session.ts   SessionPhase, SessionMessage, SessionData
+|   +-- scoring.ts   SignalCategory, SignalMatch, ScoredMessage
+|   +-- snapshot.ts  SnapshotSection, Snapshot, SnapshotConfig
+|   +-- memory.ts    MemorySection, MemoryBudget, MemoryDocument
+|   +-- risk.ts      RiskLevel, RiskThresholds, ContextMetrics
+|   +-- config.ts    CcIntelConfig with all defaults
+|
++-- core/            Processing engines
+|   +-- session-parser.ts     JSONL + markdown parsing
+|   +-- signal-patterns.ts    Regex patterns per category
+|   +-- signals.ts            Signal detection + message scoring
+|   +-- segmenter.ts          Phase-based session segmentation
+|   +-- snapshot.ts           Heuristic snapshot extraction (used by projects command)
+|   +-- llm-extractor.ts      LLM-powered extraction via Claude Haiku
+|   +-- dedup.ts              Dice coefficient deduplication
+|   +-- risk.ts               Token estimation + risk classification
+|   +-- memory-parser.ts      MEMORY.md -> MemoryDocument
+|   +-- memory-serializer.ts  MemoryDocument -> markdown string
+|   +-- memory-budget.ts      Section limit enforcement
+|   +-- memory-merger.ts      Snapshot -> existing MEMORY.md merge
+|   +-- config-loader.ts      .cc-intelrc.json loading
+|
++-- cli/             CLI layer
+|   +-- index.ts               Entry point (commander)
+|   +-- api-key-help.ts        Platform-aware API key setup instructions
+|   +-- spinner.ts             Animated progress indicator
+|   +-- branding.ts            ASCII logo and tagline
+|   +-- commands/
+|   |   +-- snapshot.ts        cc-intel snapshot
+|   |   +-- risk.ts            cc-intel risk
+|   |   +-- preserve.ts        cc-intel preserve
+|   |   +-- status.ts          cc-intel status
+|   |   +-- projects.ts        cc-intel projects
+|   +-- formatters/
+|       +-- snapshot-formatter.ts
+|       +-- risk-formatter.ts
+|
++-- utils/           Shared utilities
+    +-- errors.ts    Custom error types
+    +-- logger.ts    Structured stderr logger
+    +-- text.ts      Text normalization helpers
+    +-- safe-fs.ts   Atomic file operations with locking
 ```
 
-## Key Design Decisions
+## Key design decisions
 
-### Heuristic Scoring (Not ML)
+### LLM extraction with heuristic pre-filtering
 
-Signal detection uses regex patterns rather than ML models. This keeps the tool:
+Extraction uses a two-stage approach:
 
-- Deterministic (same input always produces same output)
-- Fast (no model loading or inference)
-- Offline (no API calls)
-- Auditable (patterns are visible and editable)
+1. **Heuristic pre-filter** -- scores all messages using regex signal detection (decisions, constraints, artifacts, TODOs) and selects the top ~60 most important messages. This runs locally and costs nothing.
+2. **LLM extraction** -- sends the filtered messages to Claude Haiku with a structured prompt. The LLM identifies which messages contain actual knowledge worth preserving and categorizes them into 5 sections.
 
-### Session Segmentation
+This keeps cost under $0.001 per extraction while producing significantly better results than pure heuristics.
+
+### BYOK API key model
+
+The user provides their own Anthropic API key via the `ANTHROPIC_API_KEY` environment variable. The key is:
+- Read from the environment at runtime
+- Never stored to disk or logged
+- Only sent to the Anthropic API
+
+### Session segmentation
 
 Messages are divided into 4 phases by position:
 
-- **Goal** (0-15%): Initial project setup, requirements
-- **Exploration** (15-50%): Research, alternatives evaluation
-- **Implementation** (50-85%): Active coding, file creation
-- **Wrap-up** (85-100%): Summary, remaining TODOs
+- **Goal** (0-15%): initial project setup, requirements
+- **Exploration** (15-50%): research, alternatives evaluation
+- **Implementation** (50-85%): active coding, file creation
+- **Wrap-up** (85-100%): summary, remaining TODOs
 
-### Atomic File Safety
+### Atomic file safety
 
-All MEMORY.md writes go through `safeWriteFile` which:
-
-1. Creates a backup of the existing file
-2. Acquires an advisory lock (via `proper-lockfile`)
-3. Checks mtime hasn't changed (stale write protection)
-4. Writes to a temp file
-5. Atomically renames temp → target
-6. Releases the lock
+All MEMORY.md writes go through `safeWriteFile` which acquires an advisory lock (via `proper-lockfile`), checks the file hasn't changed since it was read (stale write protection), writes to a temp file, and atomically renames it to the target path.
 
 ### Deduplication
 
 Uses Dice coefficient on character bigrams with a default threshold of 0.85. When duplicates are found, the most recent entry is kept.
 
-### Budget Enforcement
+### Budget enforcement
 
-MEMORY.md has strict line limits per section. When a section overflows:
-
-1. Excess content is extracted
-2. A summary bullet replaces it in MEMORY.md
-3. Original content is written to a topic file
-4. An index link is added pointing to the topic file
+MEMORY.md has strict line limits per section. When a section overflows, excess content is written to a topic file and a summary link replaces it in the main document.

@@ -1,13 +1,15 @@
 import { Command } from 'commander';
 import fs from 'node:fs/promises';
 import { parseSession } from '../../core/session-parser.js';
-import { segmentSession } from '../../core/segmenter.js';
-import { extractSnapshot } from '../../core/snapshot.js';
+import { llmExtractSnapshot, resolveApiKey } from '../../core/llm-extractor.js';
 import { discoverLatestSession } from '../../core/session-discovery.js';
 import {
   formatSnapshotAsMarkdown,
   formatSnapshotAsJson,
 } from '../formatters/snapshot-formatter.js';
+import { LlmExtractionError } from '../../utils/errors.js';
+import { formatApiKeyHelp } from '../api-key-help.js';
+import { createSpinner } from '../spinner.js';
 
 export function createSnapshotCommand(): Command {
   return new Command('snapshot')
@@ -20,14 +22,40 @@ export function createSnapshotCommand(): Command {
     .action(
       async (
         file: string | undefined,
-        options: { input?: string; format: string; output?: string; json?: boolean },
+        options: {
+          input?: string;
+          format: string;
+          output?: string;
+          json?: boolean;
+        },
       ) => {
         const input = await resolveInput(file, options.input);
         if (!input) return;
 
+        const apiKey = resolveApiKey();
+        if (!apiKey) {
+          process.stderr.write(formatApiKeyHelp());
+          process.exitCode = 1;
+          return;
+        }
+
         const session = parseSession(input, options.format as 'auto' | 'jsonl' | 'markdown');
-        const segmented = segmentSession(session.messages);
-        const snapshot = extractSnapshot(segmented);
+
+        const spinner = createSpinner('Extracting knowledge...');
+        let snapshot;
+        try {
+          spinner.start();
+          snapshot = await llmExtractSnapshot(session.messages, apiKey);
+          spinner.stop();
+        } catch (error: unknown) {
+          spinner.stop();
+          if (error instanceof LlmExtractionError) {
+            process.stderr.write(`Error: ${error.message}\n`);
+            process.exitCode = 1;
+            return;
+          }
+          throw error;
+        }
 
         const formatted = options.json
           ? formatSnapshotAsJson(snapshot)
@@ -43,7 +71,6 @@ export function createSnapshotCommand(): Command {
 }
 
 async function resolveInput(file?: string, inputFlag?: string): Promise<string> {
-  // Priority: positional arg > --input flag > auto-discover > stdin
   const filePath = file ?? inputFlag;
   if (filePath) return fs.readFile(filePath, 'utf-8');
 

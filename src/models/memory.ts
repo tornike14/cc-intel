@@ -1,12 +1,4 @@
-/**
- * Well-known section keys that cc-intel uses when creating new sections.
- * Kept as an enum for backward compatibility — existing code that accesses
- * `doc.sections[MemorySection.PinnedEssentials]` still compiles.
- *
- * The memory system now supports arbitrary section names (e.g., Claude Code's
- * "User Preferences", "Project Structure"). These well-known keys are only
- * used when cc-intel creates sections that don't already exist.
- */
+/** Well-known section keys used when cc-intel creates new sections. */
 export enum MemorySection {
   PinnedEssentials = 'pinnedEssentials',
   IndexLinks = 'indexLinks',

@@ -11,3 +11,4 @@ export * from './memory-merger.js';
 export * from './session-parser.js';
 export * from './session-discovery.js';
 export * from './config-loader.js';
+export * from './llm-extractor.js';

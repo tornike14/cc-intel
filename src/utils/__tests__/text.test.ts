@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeWhitespace, countLines, truncateToLines, isBoilerplate } from '../text.js';
+import {
+  normalizeWhitespace,
+  countLines,
+  truncateToLines,
+  isBoilerplate,
+  extractSubstantiveLine,
+} from '../text.js';
 
 describe('normalizeWhitespace', () => {
   it('collapses multiple spaces', () => {
@@ -80,5 +86,65 @@ describe('isBoilerplate', () => {
 
   it('returns false for empty string', () => {
     expect(isBoilerplate('')).toBe(false);
+  });
+});
+
+describe('extractSubstantiveLine', () => {
+  it('returns content as-is for single substantive line', () => {
+    expect(extractSubstantiveLine('We decided to use TypeScript')).toBe(
+      'We decided to use TypeScript',
+    );
+  });
+
+  it('skips empty leading lines', () => {
+    expect(extractSubstantiveLine('\n\nWe decided to use TypeScript')).toBe(
+      'We decided to use TypeScript',
+    );
+  });
+
+  it('skips filler openings like "Good question"', () => {
+    expect(
+      extractSubstantiveLine("Good question.\nWe decided to use TypeScript for strict safety"),
+    ).toBe('We decided to use TypeScript for strict safety');
+  });
+
+  it('skips "Let me check" style openings', () => {
+    expect(
+      extractSubstantiveLine("Let me check the configuration.\nThe tsconfig uses strict mode"),
+    ).toBe('The tsconfig uses strict mode');
+  });
+
+  it('skips "Yes —" style acknowledgments', () => {
+    expect(
+      extractSubstantiveLine(
+        "Yes — the plan is written!\nWe decided to use ESM with TypeScript strict mode",
+      ),
+    ).toBe('We decided to use ESM with TypeScript strict mode');
+  });
+
+  it('skips "Here\'s what" openings', () => {
+    expect(
+      extractSubstantiveLine("Here's what I found:\nThe src/core/signals.ts file handles scoring"),
+    ).toBe('The src/core/signals.ts file handles scoring');
+  });
+
+  it('falls back to first non-empty line when all lines are short', () => {
+    expect(extractSubstantiveLine('OK\nYes\nDone')).toBe('OK');
+  });
+
+  it('handles empty string', () => {
+    expect(extractSubstantiveLine('')).toBe('');
+  });
+
+  it('skips "Done." standalone acknowledgments', () => {
+    expect(
+      extractSubstantiveLine("Done.\nAll 5 review issues fixed and merged via PR #28"),
+    ).toBe('All 5 review issues fixed and merged via PR #28');
+  });
+
+  it('skips "Yes, ..." comma-style filler', () => {
+    expect(
+      extractSubstantiveLine("Yes, both are covered:\nThe JWT auth is required by team policy"),
+    ).toBe('The JWT auth is required by team policy');
   });
 });

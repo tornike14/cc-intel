@@ -16,7 +16,6 @@ export function estimateTokens(text: string): number {
   }
   const proseChars = text.length - codeChars;
 
-  // Prose: ~4 chars/token, Code: ~3.3 chars/token (higher density)
   return Math.ceil(proseChars / 4 + codeChars / 3.3);
 }
 
@@ -30,13 +29,6 @@ export function classifyRisk(
   return RiskLevel.Low;
 }
 
-/**
- * Assess context window usage and compaction risk.
- *
- * @param reservedTokens — tokens reserved for system prompt, MEMORY.md, and
- *   Claude Code framing overhead. Subtracted from maxContext before calculating
- *   utilization so the risk score reflects usable capacity, not raw limit.
- */
 export function assessRisk(
   messages: SessionMessage[],
   maxContext = 200_000,

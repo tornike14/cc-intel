@@ -93,6 +93,7 @@ describe('segmentSession', () => {
     const result = segmentSession(messages, mockScorer, {
       phaseThresholds: [0.5, 0.75, 0.9],
       maxItemsPerSection: 10,
+      minScoreThreshold: 2,
     });
 
     // 4 messages, positions: 0, 0.33, 0.67, 1.0

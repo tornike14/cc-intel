@@ -18,10 +18,6 @@ export interface MergeResult {
   entriesDeduplicated: number;
 }
 
-/**
- * Convert a camelCase section key to a default markdown header.
- * "pinnedEssentials" → "## Pinned Essentials"
- */
 function toDefaultHeader(key: string): string {
   const words = key.replace(/([A-Z])/g, ' $1').trim();
   return '## ' + words.charAt(0).toUpperCase() + words.slice(1);
@@ -37,7 +33,6 @@ export function mergeIntoMemory(
   let totalAdded = 0;
   let totalDeduped = 0;
 
-  // Map snapshot sections to memory section keys (strings, not enum)
   const mapping: [SnapshotSection, string][] = [
     [SnapshotSection.ProjectGoal, MemorySection.PinnedEssentials],
     [SnapshotSection.KeyDecisions, MemorySection.RecentDecisions],
@@ -50,7 +45,6 @@ export function mergeIntoMemory(
     const newEntries = snapshot.sections[snapshotSection];
     if (newEntries.length === 0) continue;
 
-    // Ensure target section exists — create if absent
     if (!updatedSections[targetKey]) {
       const newSection: MemorySectionData = {
         header: toDefaultHeader(targetKey),

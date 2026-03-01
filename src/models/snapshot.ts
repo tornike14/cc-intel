@@ -24,9 +24,12 @@ export interface Snapshot {
 export interface SnapshotConfig {
   phaseThresholds: [number, number, number];
   maxItemsPerSection: number;
+  /** Messages below this score are excluded from snapshot extraction */
+  minScoreThreshold: number;
 }
 
 export const DEFAULT_SNAPSHOT_CONFIG: SnapshotConfig = {
   phaseThresholds: [0.15, 0.5, 0.85],
-  maxItemsPerSection: 10,
+  maxItemsPerSection: 5,
+  minScoreThreshold: 2,
 };

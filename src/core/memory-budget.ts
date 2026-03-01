@@ -18,17 +18,14 @@ export function enforceBudget(
 
   const trimmedSections = { ...doc.sections };
 
-  // Use timestamp with seconds so overflow files are unique across runs on same day
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 
-  // Pass 1: enforce per-section limits
   for (const section of Object.keys(trimmedSections)) {
     const data = trimmedSections[section]!;
     const limit = budget.sectionLimits[section] ?? budget.defaultSectionLimit;
 
     if (data.lineCount <= limit) continue;
 
-    // Keep the first `limit` lines, overflow the rest
     const keptLines = data.lines.slice(0, limit);
     const overflowLines = data.lines.slice(limit);
 
@@ -51,8 +48,6 @@ export function enforceBudget(
 
   let totalLines = Object.values(trimmedSections).reduce((sum, s) => sum + s.lineCount, 0);
 
-  // Pass 2: enforce global maxLines cap by trimming largest sections first
-  // Seed counter with filenames already emitted by section-limit pass
   const overflowCounter: Record<string, number> = {};
   for (const action of overflowActions) {
     const key = action.topicFileLink.replace(/\.md$/, '');
@@ -67,13 +62,11 @@ export function enforceBudget(
     );
 
     const data = trimmedSections[largest]!;
-    if (data.lineCount <= 1) break; // Cannot trim further
+    if (data.lineCount <= 1) break;
 
     const excess = totalLines - budget.maxLines;
-    // Account for the +1 overflow summary line that replaces removed content
     const newLimit = Math.max(1, data.lineCount - excess - 1);
 
-    // If we can't actually shrink the section, stop to avoid infinite loop
     if (newLimit >= data.lineCount - 1) break;
 
     const keptLines = data.lines.slice(0, newLimit);

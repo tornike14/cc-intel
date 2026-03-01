@@ -102,6 +102,7 @@ describe('extractSnapshot', () => {
     const snapshot = extractSnapshot(segmented, {
       phaseThresholds: [0.15, 0.5, 0.85],
       maxItemsPerSection: 3,
+      minScoreThreshold: 0,
     });
     expect(snapshot.sections[SnapshotSection.ProjectGoal]).toHaveLength(3);
   });
@@ -119,6 +120,73 @@ describe('extractSnapshot', () => {
     expect(snapshot.metadata.phaseDistribution[SessionPhase.Goal]).toBe(1);
     expect(snapshot.metadata.phaseDistribution[SessionPhase.Implementation]).toBe(2);
     expect(snapshot.metadata.extractedAt).toBeTruthy();
+  });
+
+  it('excludes human messages from snapshot entries', () => {
+    const segmented = emptySegmented();
+    const humanMsg: ScoredMessage = {
+      content: 'I also tried another command: npm test',
+      role: 'human',
+      signals: [
+        { category: SignalCategory.Artifact, weight: 3, pattern: '', matchedText: 'npm test' },
+      ],
+      importanceScore: 3,
+    };
+    segmented[SessionPhase.Goal] = [
+      humanMsg,
+      makeScoredMessage('Build a CLI tool for context monitoring', 5),
+    ];
+
+    const snapshot = extractSnapshot(segmented);
+    expect(snapshot.sections[SnapshotSection.ProjectGoal]).toHaveLength(1);
+    expect(snapshot.sections[SnapshotSection.ProjectGoal][0]!.text).toContain('CLI tool');
+    // Metadata still counts human messages
+    expect(snapshot.metadata.messageCount).toBe(2);
+  });
+
+  it('excludes messages below minimum score threshold', () => {
+    const segmented = emptySegmented();
+    segmented[SessionPhase.Goal] = [
+      makeScoredMessage('Low signal chatter', 1),
+      makeScoredMessage('We decided to use TypeScript for strict safety', 5),
+    ];
+
+    const snapshot = extractSnapshot(segmented);
+    expect(snapshot.sections[SnapshotSection.ProjectGoal]).toHaveLength(1);
+    expect(snapshot.sections[SnapshotSection.ProjectGoal][0]!.text).toContain('TypeScript');
+  });
+
+  it('allows custom minScoreThreshold', () => {
+    const segmented = emptySegmented();
+    segmented[SessionPhase.Goal] = [
+      makeScoredMessage('Barely relevant', 1.5),
+      makeScoredMessage('Somewhat relevant', 3),
+    ];
+
+    const snapshot = extractSnapshot(segmented, {
+      phaseThresholds: [0.15, 0.5, 0.85],
+      maxItemsPerSection: 10,
+      minScoreThreshold: 1,
+    });
+    expect(snapshot.sections[SnapshotSection.ProjectGoal]).toHaveLength(2);
+  });
+
+  it('deduplicates entries across sections', () => {
+    const segmented = emptySegmented();
+    // Same message in Goal phase with both decision and constraint signals
+    segmented[SessionPhase.Goal] = [
+      makeScoredMessage('We must use TypeScript for type safety', 6, [
+        SignalCategory.Decision,
+        SignalCategory.Constraint,
+      ]),
+    ];
+
+    const snapshot = extractSnapshot(segmented);
+    // Should appear in ProjectGoal (first section extracted)
+    expect(snapshot.sections[SnapshotSection.ProjectGoal]).toHaveLength(1);
+    // Should NOT appear again in KeyDecisions or Constraints
+    expect(snapshot.sections[SnapshotSection.KeyDecisions]).toHaveLength(0);
+    expect(snapshot.sections[SnapshotSection.Constraints]).toHaveLength(0);
   });
 
   it('excludes boilerplate messages from snapshot entries', () => {

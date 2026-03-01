@@ -8,11 +8,6 @@ const logger = createLogger('config-loader');
 
 const CONFIG_FILENAME = '.cc-intelrc.json';
 
-/**
- * Search order for config file:
- * 1. Current working directory
- * 2. Home directory
- */
 async function findConfigFile(cwd: string = process.cwd()): Promise<string | null> {
   const candidates = [path.join(cwd, CONFIG_FILENAME), path.join(os.homedir(), CONFIG_FILENAME)];
 
@@ -21,7 +16,7 @@ async function findConfigFile(cwd: string = process.cwd()): Promise<string | nul
       await fs.access(candidate);
       return candidate;
     } catch {
-      // File doesn't exist, try next
+      // not found, try next
     }
   }
   return null;

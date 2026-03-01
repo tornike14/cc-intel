@@ -16,7 +16,7 @@ export const DEFAULT_SIGNAL_PATTERNS: Record<SignalCategory, RegExp[]> = {
     /(?:^|\s)((?:\.\/|\/|src\/|lib\/)[\w./-]+\.\w{1,5})\b/gm,
     /(?:^|\s)((?:GET|POST|PUT|DELETE|PATCH)\s+\/[\w/:-]+)/gm,
     /```[\s\S]*?```/gm,
-    /`[^`]{3,}`/gm,
+    /`[^`]{15,}`/gm,
     /\$\s+.+$/gm,
   ],
 
