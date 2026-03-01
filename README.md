@@ -8,7 +8,7 @@
   \___\___|    |_|_| |_|\__\___|_|
 ```
 
-[![CI](https://github.com/tornike14/cc-intel/actions/workflows/ci.yml/badge.svg)](https://github.com/tornike14/cc-intel/actions/workflows/ci.yml)
+[![CI](https://github.com/tornike14/cc-intel/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/tornike14/cc-intel/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/cc-intel.svg)](https://www.npmjs.com/package/cc-intel)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
@@ -36,6 +36,8 @@ Every command auto-discovers your latest session from `~/.claude/projects/`. No 
 ---
 
 ## Install
+
+This is a CLI tool -- install it globally so the `cc-intel` command is available everywhere:
 
 ```bash
 npm install -g cc-intel
