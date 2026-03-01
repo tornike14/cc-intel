@@ -23,15 +23,15 @@ cc-intel reads your session transcripts, uses Claude to extract what matters, an
 
 ## What it does
 
-| Command             | What it does                                                                     |
-| ------------------- | -------------------------------------------------------------------------------- |
-| `cc-intel snapshot` | Reads your latest session, extracts decisions, constraints, artifacts, and tasks |
-| `cc-intel preserve` | Same as snapshot, but writes the results directly into MEMORY.md                 |
-| `cc-intel risk`     | Shows how full your context window is and warns before compaction hits           |
-| `cc-intel status`   | Shows MEMORY.md health: how full each section is, what's near its limit          |
-| `cc-intel projects` | Browse all your Claude Code projects and pick one to analyze                     |
+| Command    | What it does                                                 |
+| ---------- | ------------------------------------------------------------ |
+| `projects` | Pick a project -- auto-finds the latest session to analyze   |
+| `snapshot` | Extract decisions, constraints, artifacts, and tasks         |
+| `preserve` | Same as snapshot, but writes results into MEMORY.md          |
+| `risk`     | Check how full your context window is before compaction hits |
+| `status`   | Show MEMORY.md health and section budget usage               |
 
-Every command auto-discovers your latest session from `~/.claude/projects/`. No flags needed.
+All commands are run as `cc-intel <command>`. By default they auto-discover your latest session from `~/.claude/projects/`, or you can pass a specific session file with `--input`.
 
 ---
 
