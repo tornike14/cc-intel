@@ -9,9 +9,7 @@ export function toSectionKey(header: string): string {
 
   return words
     .map((word, i) =>
-      i === 0
-        ? word.toLowerCase()
-        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
+      i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
     )
     .join('');
 }

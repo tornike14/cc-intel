@@ -100,9 +100,7 @@ describe('parseClaudeCodeSession', () => {
         type: 'assistant',
         message: {
           role: 'assistant',
-          content: [
-            { type: 'tool_use', id: 't1', name: 'Read', input: { file_path: 'foo.ts' } },
-          ],
+          content: [{ type: 'tool_use', id: 't1', name: 'Read', input: { file_path: 'foo.ts' } }],
         },
       }),
     ].join('\n');

@@ -100,8 +100,15 @@ describe('deduplicate', () => {
   });
 
   it('deduplicates prefix matches from truncation upgrade (150→500 chars)', () => {
-    const shortText = '- ' + 'Decided to use React for the frontend framework because it provides excellent SSR support and has a very large ecosystem of libraries'.slice(0, 150) + '...';
-    const longText = '- Decided to use React for the frontend framework because it provides excellent SSR support and has a very large ecosystem of libraries';
+    const shortText =
+      '- ' +
+      'Decided to use React for the frontend framework because it provides excellent SSR support and has a very large ecosystem of libraries'.slice(
+        0,
+        150,
+      ) +
+      '...';
+    const longText =
+      '- Decided to use React for the frontend framework because it provides excellent SSR support and has a very large ecosystem of libraries';
     const result = deduplicate([{ text: shortText }, { text: longText }]);
     expect(result).toHaveLength(1);
     // Should keep the longer entry (more context)
@@ -109,16 +116,20 @@ describe('deduplicate', () => {
   });
 
   it('keeps longer entry when old truncated prefix appears first', () => {
-    const oldEntry = '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output...';
-    const newEntry = '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output and automatic declaration files';
+    const oldEntry =
+      '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output...';
+    const newEntry =
+      '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output and automatic declaration files';
     const result = deduplicate([{ text: oldEntry }, { text: newEntry }]);
     expect(result).toHaveLength(1);
     expect(result[0]!.text).toBe(newEntry);
   });
 
   it('keeps longer entry when new entry appears first', () => {
-    const newEntry = '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output and automatic declaration files';
-    const oldEntry = '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output...';
+    const newEntry =
+      '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output and automatic declaration files';
+    const oldEntry =
+      '- Switched from Webpack to tsup for faster builds and simpler configuration with ESM output...';
     const result = deduplicate([{ text: newEntry }, { text: oldEntry }]);
     expect(result).toHaveLength(1);
     expect(result[0]!.text).toBe(newEntry);

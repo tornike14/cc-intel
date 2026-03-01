@@ -88,18 +88,14 @@ describe('formatMessagesForLlm', () => {
   });
 
   it('truncates long messages', () => {
-    const msgs: SessionMessage[] = [
-      { role: 'assistant', content: 'x'.repeat(3000) },
-    ];
+    const msgs: SessionMessage[] = [{ role: 'assistant', content: 'x'.repeat(3000) }];
     const result = formatMessagesForLlm(msgs);
     expect(result).toContain('[...truncated]');
     expect(result.length).toBeLessThan(3000);
   });
 
   it('trims whitespace from messages', () => {
-    const msgs: SessionMessage[] = [
-      { role: 'human', content: '  hello world  ' },
-    ];
+    const msgs: SessionMessage[] = [{ role: 'human', content: '  hello world  ' }];
     const result = formatMessagesForLlm(msgs);
     expect(result).toContain('Human: hello world');
   });

@@ -47,9 +47,7 @@ export function formatSnapshotAsMarkdown(snapshot: Snapshot): string {
 
   parts.push('  ' + '-'.repeat(50));
   const totalEntries = Object.values(snapshot.sections).reduce((sum, s) => sum + s.length, 0);
-  parts.push(
-    `  Extracted ${totalEntries} entries from ${snapshot.metadata.messageCount} messages`,
-  );
+  parts.push(`  Extracted ${totalEntries} entries from ${snapshot.metadata.messageCount} messages`);
   parts.push('');
 
   return parts.join('\n');

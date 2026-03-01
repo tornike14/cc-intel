@@ -94,11 +94,7 @@ describe('parseMemoryDocument', () => {
   it('parses Claude Code memory with title and preamble', () => {
     const doc = parseMemoryDocument(CLAUDE_CODE_MEMORY);
     expect(doc.title).toBe('# cc-intel Project Memory');
-    expect(doc.sectionOrder).toEqual([
-      'userPreferences',
-      'projectStructure',
-      'implementationPlan',
-    ]);
+    expect(doc.sectionOrder).toEqual(['userPreferences', 'projectStructure', 'implementationPlan']);
     expect(doc.sections['userPreferences']!.lineCount).toBe(3);
     expect(doc.sections['projectStructure']!.lineCount).toBe(2);
     expect(doc.sections['implementationPlan']!.lineCount).toBe(1);
@@ -371,7 +367,11 @@ describe('mergeIntoMemory', () => {
     expect(updatedDoc.sections['userPreferences']!.lineCount).toBe(3);
     // New cc-intel section created
     expect(updatedDoc.sections[MemorySection.RecentDecisions]).toBeDefined();
-    expect(updatedDoc.sections[MemorySection.RecentDecisions]!.lines.some((l) => l.includes('Commander'))).toBe(true);
+    expect(
+      updatedDoc.sections[MemorySection.RecentDecisions]!.lines.some((l) =>
+        l.includes('Commander'),
+      ),
+    ).toBe(true);
     // Claude Code sections come first in order, new section appended
     expect(updatedDoc.sectionOrder.indexOf('userPreferences')).toBeLessThan(
       updatedDoc.sectionOrder.indexOf('recentDecisions'),

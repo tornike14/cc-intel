@@ -15,12 +15,8 @@ import { serializeMemoryDocument } from '../../core/memory-serializer.js';
 import { mergeIntoMemory } from '../../core/memory-merger.js';
 import { DEFAULT_MEMORY_BUDGET, RiskLevel, type CcIntelConfig } from '../../models/index.js';
 import { safeWriteFile, safeReadFile, ensureDir } from '../../utils/safe-fs.js';
-import {
-  formatSnapshotAsMarkdown,
-} from '../formatters/snapshot-formatter.js';
-import {
-  formatRiskAsMarkdown,
-} from '../formatters/risk-formatter.js';
+import { formatSnapshotAsMarkdown } from '../formatters/snapshot-formatter.js';
+import { formatRiskAsMarkdown } from '../formatters/risk-formatter.js';
 import { createLogger } from '../../utils/logger.js';
 
 const logger = createLogger('projects');
@@ -148,8 +144,7 @@ async function runSubcommand(
 
 function formatProjectChoice(project: ProjectInfo): string {
   const age = formatRelativeTime(project.lastModifiedMs);
-  const sessions =
-    project.sessionCount === 1 ? '1 session' : `${project.sessionCount} sessions`;
+  const sessions = project.sessionCount === 1 ? '1 session' : `${project.sessionCount} sessions`;
   return `${project.name} (${project.decodedPath})    ${sessions}, last: ${age}`;
 }
 

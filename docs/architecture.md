@@ -84,6 +84,7 @@ This keeps cost under $0.001 per extraction while producing significantly better
 ### BYOK API key model
 
 The user provides their own Anthropic API key via the `ANTHROPIC_API_KEY` environment variable. The key is:
+
 - Read from the environment at runtime
 - Never stored to disk or logged
 - Only sent to the Anthropic API

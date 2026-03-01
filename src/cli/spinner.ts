@@ -1,4 +1,15 @@
-const FRAMES = ['\u28CB', '\u28D9', '\u28F9', '\u28F8', '\u28FC', '\u28F4', '\u28E6', '\u28E7', '\u28C7', '\u28CF'];
+const FRAMES = [
+  '\u28CB',
+  '\u28D9',
+  '\u28F9',
+  '\u28F8',
+  '\u28FC',
+  '\u28F4',
+  '\u28E6',
+  '\u28E7',
+  '\u28C7',
+  '\u28CF',
+];
 
 export interface Spinner {
   start(): void;

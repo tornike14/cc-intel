@@ -79,12 +79,7 @@ describe('assessRisk', () => {
 
   it('accounts for reservedTokens in utilization', () => {
     // 400 chars = 100 tokens prose. maxContext=200, reserved=0 → 50% utilization
-    const noReserve = assessRisk(
-      [{ role: 'human', content: 'a'.repeat(400) }],
-      200,
-      undefined,
-      0,
-    );
+    const noReserve = assessRisk([{ role: 'human', content: 'a'.repeat(400) }], 200, undefined, 0);
     expect(noReserve.utilizationPercent).toBeCloseTo(0.5, 1);
 
     // Same tokens, maxContext=200, reserved=100 → effective max=100 → 100% utilization

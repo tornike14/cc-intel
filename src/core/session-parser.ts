@@ -20,9 +20,14 @@ export function detectFormat(input: string): 'jsonl' | 'claude-code' | 'markdown
     const parsed = JSON.parse(firstLine) as Record<string, unknown>;
     if (
       typeof parsed['type'] === 'string' &&
-      ['user', 'assistant', 'queue-operation', 'system', 'progress', 'file-history-snapshot'].includes(
-        parsed['type'],
-      )
+      [
+        'user',
+        'assistant',
+        'queue-operation',
+        'system',
+        'progress',
+        'file-history-snapshot',
+      ].includes(parsed['type'])
     ) {
       return 'claude-code';
     }
@@ -47,8 +52,7 @@ export function parseClaudeCodeSession(input: string): SessionData {
       const message = parsed['message'] as Record<string, unknown> | undefined;
       if (!message) continue;
 
-      const timestamp =
-        typeof parsed['timestamp'] === 'string' ? parsed['timestamp'] : undefined;
+      const timestamp = typeof parsed['timestamp'] === 'string' ? parsed['timestamp'] : undefined;
 
       if (lineType === 'user') {
         if (typeof message['content'] !== 'string') continue;

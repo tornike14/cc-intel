@@ -1,6 +1,6 @@
 {
   "name": "cc-intel",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Local-first CLI tool that strengthens Claude Code reliability by monitoring context, extracting knowledge, and preserving decisions into memory",
   "type": "module",
   "main": "./dist/index.js",
@@ -55,6 +55,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
     "@inquirer/select": "^5.1.0",
+    "cc-intel": "^0.2.0",
     "commander": "^13.1.0",
     "proper-lockfile": "^4.1.2"
   },
