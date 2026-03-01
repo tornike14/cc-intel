@@ -236,7 +236,8 @@ describe('memoryPathFromSession', () => {
   });
 
   it('handles nested project directories', () => {
-    const sessionPath = '/Users/nizhara/.claude/projects/-Users-nizhara-Desktop-cc-intel/cd063.jsonl';
+    const sessionPath =
+      '/Users/nizhara/.claude/projects/-Users-nizhara-Desktop-cc-intel/cd063.jsonl';
     expect(memoryPathFromSession(sessionPath)).toBe(
       '/Users/nizhara/.claude/projects/-Users-nizhara-Desktop-cc-intel/memory/MEMORY.md',
     );

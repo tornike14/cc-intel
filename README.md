@@ -23,13 +23,13 @@ cc-intel reads your session transcripts, uses Claude to extract what matters, an
 
 ## What it does
 
-| Command | What it does |
-|---------|-------------|
+| Command             | What it does                                                                     |
+| ------------------- | -------------------------------------------------------------------------------- |
 | `cc-intel snapshot` | Reads your latest session, extracts decisions, constraints, artifacts, and tasks |
-| `cc-intel preserve` | Same as snapshot, but writes the results directly into MEMORY.md |
-| `cc-intel risk` | Shows how full your context window is and warns before compaction hits |
-| `cc-intel status` | Shows MEMORY.md health: how full each section is, what's near its limit |
-| `cc-intel projects` | Browse all your Claude Code projects and pick one to analyze |
+| `cc-intel preserve` | Same as snapshot, but writes the results directly into MEMORY.md                 |
+| `cc-intel risk`     | Shows how full your context window is and warns before compaction hits           |
+| `cc-intel status`   | Shows MEMORY.md health: how full each section is, what's near its limit          |
+| `cc-intel projects` | Browse all your Claude Code projects and pick one to analyze                     |
 
 Every command auto-discovers your latest session from `~/.claude/projects/`. No flags needed.
 
@@ -196,12 +196,12 @@ Supported formats: native Claude Code JSONL (auto-detected), simple JSONL (`{"ro
 
 MEMORY.md has strict line limits to stay useful inside Claude's system prompt:
 
-| Section | Default limit |
-|---------|--------------|
-| Pinned Essentials | 80 lines |
-| Index Links | 40 lines |
-| Recent Decisions | 60 lines |
-| **Total** | **200 lines** |
+| Section           | Default limit |
+| ----------------- | ------------- |
+| Pinned Essentials | 80 lines      |
+| Index Links       | 40 lines      |
+| Recent Decisions  | 60 lines      |
+| **Total**         | **200 lines** |
 
 When a section overflows, excess content moves to a topic file and a link replaces it in MEMORY.md.
 

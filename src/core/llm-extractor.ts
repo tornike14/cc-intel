@@ -60,7 +60,9 @@ export function prefilterMessages(
 
   const first5 = filtered.slice(0, 5);
   const last5 = filtered.slice(-5);
-  const middle = filtered.slice(5, -5).sort((a, b) => b.scored.importanceScore - a.scored.importanceScore);
+  const middle = filtered
+    .slice(5, -5)
+    .sort((a, b) => b.scored.importanceScore - a.scored.importanceScore);
 
   const budget = maxMessages - first5.length - last5.length;
   const topMiddle = middle.slice(0, Math.max(0, budget));
@@ -110,7 +112,9 @@ function parseResponse(text: string, messageCount: number): Snapshot {
   try {
     parsed = JSON.parse(cleaned) as LlmRawResponse;
   } catch {
-    throw new LlmExtractionError(`Failed to parse LLM response as JSON: ${cleaned.substring(0, 200)}`);
+    throw new LlmExtractionError(
+      `Failed to parse LLM response as JSON: ${cleaned.substring(0, 200)}`,
+    );
   }
 
   const sectionKeys: (keyof LlmRawResponse)[] = [
@@ -198,7 +202,9 @@ export async function llmExtractSnapshot(
     throw new LlmExtractionError('No text content in API response');
   }
 
-  logger.debug(`API response tokens: ${response.usage.input_tokens} in, ${response.usage.output_tokens} out`);
+  logger.debug(
+    `API response tokens: ${response.usage.input_tokens} in, ${response.usage.output_tokens} out`,
+  );
 
   return parseResponse(textBlock.text, messages.length);
 }

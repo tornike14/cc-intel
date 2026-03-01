@@ -104,20 +104,20 @@ describe('extractSubstantiveLine', () => {
 
   it('skips filler openings like "Good question"', () => {
     expect(
-      extractSubstantiveLine("Good question.\nWe decided to use TypeScript for strict safety"),
+      extractSubstantiveLine('Good question.\nWe decided to use TypeScript for strict safety'),
     ).toBe('We decided to use TypeScript for strict safety');
   });
 
   it('skips "Let me check" style openings', () => {
     expect(
-      extractSubstantiveLine("Let me check the configuration.\nThe tsconfig uses strict mode"),
+      extractSubstantiveLine('Let me check the configuration.\nThe tsconfig uses strict mode'),
     ).toBe('The tsconfig uses strict mode');
   });
 
   it('skips "Yes —" style acknowledgments', () => {
     expect(
       extractSubstantiveLine(
-        "Yes — the plan is written!\nWe decided to use ESM with TypeScript strict mode",
+        'Yes — the plan is written!\nWe decided to use ESM with TypeScript strict mode',
       ),
     ).toBe('We decided to use ESM with TypeScript strict mode');
   });
@@ -137,14 +137,14 @@ describe('extractSubstantiveLine', () => {
   });
 
   it('skips "Done." standalone acknowledgments', () => {
-    expect(
-      extractSubstantiveLine("Done.\nAll 5 review issues fixed and merged via PR #28"),
-    ).toBe('All 5 review issues fixed and merged via PR #28');
+    expect(extractSubstantiveLine('Done.\nAll 5 review issues fixed and merged via PR #28')).toBe(
+      'All 5 review issues fixed and merged via PR #28',
+    );
   });
 
   it('skips "Yes, ..." comma-style filler', () => {
     expect(
-      extractSubstantiveLine("Yes, both are covered:\nThe JWT auth is required by team policy"),
+      extractSubstantiveLine('Yes, both are covered:\nThe JWT auth is required by team policy'),
     ).toBe('The JWT auth is required by team policy');
   });
 });

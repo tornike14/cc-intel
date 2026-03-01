@@ -177,10 +177,7 @@ async function resolveInput(file?: string, inputFlag?: string): Promise<Resolved
   return { content: await readStdin() };
 }
 
-async function resolveMemoryPath(
-  explicitPath?: string,
-  sessionPath?: string,
-): Promise<string> {
+async function resolveMemoryPath(explicitPath?: string, sessionPath?: string): Promise<string> {
   if (explicitPath) return explicitPath;
 
   if (sessionPath) {

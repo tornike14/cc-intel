@@ -52,8 +52,7 @@ export function isPrefixMatch(a: string, b: string): boolean {
 
   if (normA.length < 20 || normB.length < 20) return false;
 
-  const [shorter, longer] =
-    normA.length <= normB.length ? [normA, normB] : [normB, normA];
+  const [shorter, longer] = normA.length <= normB.length ? [normA, normB] : [normB, normA];
 
   return longer.startsWith(shorter);
 }

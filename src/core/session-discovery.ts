@@ -38,10 +38,7 @@ export async function decodeProjectPath(dirName: string): Promise<string> {
 }
 
 /** Resolve ambiguous segments by probing the filesystem with greedy hyphen merging. */
-async function resolveSegments(
-  segments: string[],
-  root: string,
-): Promise<string | null> {
+async function resolveSegments(segments: string[], root: string): Promise<string | null> {
   if (segments.length === 0) return root;
 
   let current = root;
@@ -127,9 +124,7 @@ export async function listProjects(): Promise<ProjectInfo[]> {
   return projects;
 }
 
-export async function discoverLatestSessionInProject(
-  projectDir: string,
-): Promise<string | null> {
+export async function discoverLatestSessionInProject(projectDir: string): Promise<string | null> {
   const { files } = await scanSessionFilesWithPaths(projectDir);
 
   if (files.length === 0) {
@@ -170,14 +165,7 @@ export async function discoverProjectMemoryPath(cwd?: string): Promise<string | 
   }
 
   const dirName = encodeProjectPath(projectRoot);
-  const memoryPath = path.join(
-    os.homedir(),
-    '.claude',
-    'projects',
-    dirName,
-    'memory',
-    'MEMORY.md',
-  );
+  const memoryPath = path.join(os.homedir(), '.claude', 'projects', dirName, 'memory', 'MEMORY.md');
 
   try {
     await fs.access(memoryPath);
