@@ -56,7 +56,7 @@
     "@anthropic-ai/sdk": "^0.78.0",
     "@inquirer/select": "^5.1.0",
     "cc-intel": "^0.2.0",
-    "commander": "^13.1.0",
+    "commander": "^14.0.3",
     "proper-lockfile": "^4.1.2"
   },
   "devDependencies": {
