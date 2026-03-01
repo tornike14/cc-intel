@@ -36,7 +36,6 @@ export async function safeWriteFile(
   const dir = path.dirname(filePath);
   await ensureDir(dir);
 
-  // 1. Backup existing file
   const exists = await fileExists(filePath);
   if (exists) {
     const backupPath = filePath + '.bak';
@@ -44,7 +43,6 @@ export async function safeWriteFile(
     logger.debug(`Backup created: ${backupPath}`);
   }
 
-  // 2. Acquire advisory lock
   let release: (() => Promise<void>) | undefined;
   try {
     release = await lockfile.lock(filePath, {
@@ -56,7 +54,6 @@ export async function safeWriteFile(
   }
 
   try {
-    // 3. Verify mtime unchanged
     if (expectedMtime !== undefined && exists) {
       const currentMtime = await readMtime(filePath);
       if (Math.abs(currentMtime - expectedMtime) > 1) {
@@ -64,16 +61,13 @@ export async function safeWriteFile(
       }
     }
 
-    // 4. Write to temp file
     const tmpSuffix = crypto.randomBytes(6).toString('hex');
     const tmpPath = `${filePath}.tmp.${tmpSuffix}`;
     await fs.writeFile(tmpPath, content, 'utf-8');
 
-    // 5. Atomic rename
     await fs.rename(tmpPath, filePath);
     logger.debug(`Atomic write completed: ${filePath}`);
   } finally {
-    // 6. Release lock
     if (release) {
       await release();
     }

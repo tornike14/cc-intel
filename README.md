@@ -13,207 +13,195 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 
-**Context Guardian for Claude Code** — Stop losing critical decisions to context compaction.
+**Your Claude Code sessions are losing memory. cc-intel fixes that.**
 
-Claude Code sessions accumulate architectural decisions, constraints, and implementation artifacts — then lose them when the context window compacts. cc-intel guards that knowledge by extracting, scoring, and preserving it into MEMORY.md before it vanishes.
+You spend an hour making architectural decisions with Claude Code. Then the context window fills up, compaction kicks in, and those decisions vanish. Next session? Claude starts from scratch, contradicts itself, and you repeat the same conversations.
 
----
-
-## The Problem
-
-Long Claude Code sessions build up critical project context: what was decided, what constraints exist, which files were created. When the context window fills up and compacts, that knowledge disappears silently. The next session starts from scratch, repeating decisions or contradicting earlier ones.
-
-## The Solution
-
-cc-intel monitors your sessions and extracts the signals that matter — decisions, constraints, artifacts, and open tasks. It scores each message using heuristic signal detection, segments the session into phases, and preserves the highest-value knowledge into Claude's MEMORY.md with strict budget enforcement and deduplication.
+cc-intel reads your session transcripts, uses Claude to extract what matters, and writes it to MEMORY.md so nothing gets lost.
 
 ---
 
-## Quick Start
+## What it does
+
+| Command | What it does |
+|---------|-------------|
+| `cc-intel snapshot` | Reads your latest session, extracts decisions, constraints, artifacts, and tasks |
+| `cc-intel preserve` | Same as snapshot, but writes the results directly into MEMORY.md |
+| `cc-intel risk` | Shows how full your context window is and warns before compaction hits |
+| `cc-intel status` | Shows MEMORY.md health: how full each section is, what's near its limit |
+| `cc-intel projects` | Browse all your Claude Code projects and pick one to analyze |
+
+Every command auto-discovers your latest session from `~/.claude/projects/`. No flags needed.
+
+---
+
+## Install
 
 ```bash
 npm install -g cc-intel
 ```
 
-Run from inside any project with Claude Code sessions:
+### API key setup
+
+cc-intel uses Claude Haiku to extract knowledge from your sessions. You need an Anthropic API key.
+
+1. Get one at [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys)
+2. Add it to your shell:
 
 ```bash
-cc-intel snapshot        # extract knowledge from latest session
-cc-intel risk            # assess compaction risk
-cc-intel preserve        # save knowledge to MEMORY.md
-cc-intel status          # check MEMORY.md health
-cc-intel projects        # pick a project interactively
+echo 'export ANTHROPIC_API_KEY=sk-ant-api03-your-key-here' >> ~/.zshrc
+source ~/.zshrc
 ```
 
-No flags needed — cc-intel auto-discovers the latest session from `~/.claude/projects/`.
+(On bash, use `~/.bashrc` instead. On Windows, see the instructions shown when you run any command without a key set.)
 
-## Commands
+Cost is roughly $0.001 per extraction.
 
-### `cc-intel snapshot`
+> **Your key stays on your machine.** cc-intel reads it from the environment variable at runtime and sends it only to the Anthropic API. It is never stored to disk, logged, or transmitted anywhere else. This is the same BYOK (bring your own key) pattern used by every major CLI tool.
 
-Extract structured knowledge from a session transcript.
+---
+
+## Usage
+
+### Extract a snapshot
 
 ```bash
-cc-intel snapshot                          # auto-discover latest session
-cc-intel snapshot path/to/session.jsonl    # explicit file
-cc-intel snapshot --json                   # JSON output
-cc-intel snapshot -o snapshot.md           # write to file
+cc-intel snapshot
 ```
 
-| Option | Description |
-|--------|-------------|
-| `[file]` | Session file path (default: auto-discover latest) |
-| `-f, --format <fmt>` | Input format: `auto`, `jsonl`, `markdown` (default: `auto`) |
-| `-o, --output <path>` | Output file path (default: stdout) |
-| `--json` | Output as JSON instead of markdown |
+Reads the latest session from your current project and prints a structured breakdown:
 
-### `cc-intel risk`
+```
+  # Session Snapshot
+  --------------------------------------------------
 
-Assess context window usage and compaction risk. Exits with code 1 for High/Critical risk — useful in CI.
+  ## Project Goal (2)
+    - Build a REST API with Express and TypeScript
+    - Add JWT authentication for all protected routes
+
+  ## Key Decisions (5)
+    - Use PostgreSQL with Drizzle ORM instead of Prisma
+    - Store sessions in Redis for horizontal scaling
+    ...
+
+  ## Constraints (3)
+    - API must return responses under 200ms at p99
+    ...
+
+  ## Implementation Artifacts (4)
+    - Created src/routes/auth.ts with login/register endpoints
+    ...
+
+  ## Open Tasks (2)
+    - Add rate limiting middleware
+    - Write integration tests for auth flow
+
+  --------------------------------------------------
+  Extracted 16 entries from 85 messages
+```
+
+### Preserve to MEMORY.md
 
 ```bash
-cc-intel risk                              # auto-discover latest session
-cc-intel risk path/to/session.jsonl        # explicit file
-cc-intel risk --json --threshold 150000    # custom threshold
+cc-intel preserve            # write to MEMORY.md
+cc-intel preserve --dry-run  # preview without writing
 ```
 
-| Option | Description |
-|--------|-------------|
-| `[file]` | Session file path (default: auto-discover latest) |
-| `-f, --format <fmt>` | Input format: `auto`, `jsonl`, `markdown` (default: `auto`) |
-| `--json` | Output as JSON |
-| `--threshold <n>` | Max context tokens (default: `200000`) |
+Extracts knowledge and merges it into your project's MEMORY.md with deduplication. Existing entries are preserved; duplicates are skipped. Budget limits keep the file from growing unbounded.
 
-### `cc-intel preserve`
-
-Merge session knowledge into MEMORY.md with deduplication and budget enforcement.
+### Check compaction risk
 
 ```bash
-cc-intel preserve                          # auto-discover, write to MEMORY.md
-cc-intel preserve --dry-run                # preview without writing
-cc-intel preserve path/to/session.jsonl    # explicit file
-cc-intel preserve -m ./MEMORY.md           # custom MEMORY.md path
+cc-intel risk
 ```
 
-| Option | Description |
-|--------|-------------|
-| `[file]` | Session file path (default: auto-discover latest) |
-| `-f, --format <fmt>` | Input format: `auto`, `jsonl`, `markdown` (default: `auto`) |
-| `-m, --memory <path>` | MEMORY.md path (default: `~/.claude/MEMORY.md`) |
-| `--dry-run` | Preview changes without writing |
-| `--max-lines <n>` | Max MEMORY.md lines (default: `200`) |
+Estimates how full your context window is and classifies the risk:
 
-### `cc-intel projects`
+```
+# Context Risk Assessment
 
-Browse all Claude Code projects and run a command on one interactively. Useful when you're not inside a project directory.
+Risk Level: **HIGH**
 
-```bash
-cc-intel projects                # interactive arrow-key picker
-cc-intel projects --json         # list all projects as JSON
+Utilization: 72.3% [##############......]
+Estimated tokens: 144,600 / 200,000
+Messages: 127
 ```
 
-In interactive mode, you select a project and then choose a command (snapshot, risk, or preserve) to run on it. The `--json` flag outputs a machine-readable project list for scripting.
+Exits with code 1 when risk is High or Critical -- useful in CI or git hooks.
 
-| Option | Description |
-|--------|-------------|
-| `--json` | Output project list as JSON (non-interactive) |
-
-### `cc-intel status`
-
-Show MEMORY.md health, budget utilization, and section breakdown.
+### Check MEMORY.md health
 
 ```bash
 cc-intel status
-cc-intel status --memory ./MEMORY.md --json
 ```
 
-| Option | Description |
-|--------|-------------|
-| `-m, --memory <path>` | MEMORY.md path (default: `~/.claude/MEMORY.md`) |
-| `--json` | Output as JSON |
+Shows budget utilization per section:
+
+```
+  MEMORY.md Status
+  --------------------------------------------------
+  Path: /Users/you/.claude/projects/.../memory/MEMORY.md
+  Total: 142/200 lines (71%)
+
+    Pinned Essentials: 45/80 [########.......] 56%
+    Index Links: 12/40 [####...........] 30%
+    Recent Decisions: 52/60 [#############..] 87%
+```
+
+### Browse projects
+
+```bash
+cc-intel projects        # interactive picker
+cc-intel projects --json # machine-readable list
+```
+
+Shows all Claude Code projects, lets you pick one, then runs snapshot/risk/preserve on it.
 
 ---
 
-## Session Auto-Discovery
+## How it works
 
-When no file is specified, cc-intel automatically finds the latest session:
+1. **Parse** -- reads native Claude Code session files (JSONL) from `~/.claude/projects/`
+2. **Pre-filter** -- scores messages by signal patterns (decisions, constraints, artifacts, TODOs) and picks the top ~60 messages
+3. **Extract** -- sends the filtered messages to Claude Haiku, which identifies the actual knowledge worth preserving
+4. **Deduplicate** -- compares new entries against existing MEMORY.md using Dice coefficient similarity
+5. **Write** -- merges into MEMORY.md with atomic file writes and advisory locking
 
-1. Resolves the git root of the current directory
-2. Looks in `~/.claude/projects/<project-dir>/` for `.jsonl` files
-3. Uses the most recently modified session
-
-This works with native Claude Code session files — the internal JSONL format that Claude Code writes during conversations. The parser handles user messages, assistant responses with mixed text/tool-use blocks, and gracefully skips tool results and operational entries.
-
----
-
-## Session Input Formats
-
-### Native Claude Code (auto-detected)
-
-Session files written by Claude Code at `~/.claude/projects/`. Detected automatically — no configuration needed.
-
-### Simple JSONL
-
-One JSON object per line with `role` and `content` fields:
-
-```jsonl
-{"role":"human","content":"Build a REST API with Express"}
-{"role":"assistant","content":"I'll set up Express with TypeScript."}
-```
-
-### Markdown
-
-Alternating `Human:` and `Assistant:` prefixes:
-
-```
-Human: Build a REST API with Express
-Assistant: I'll set up Express with TypeScript.
-```
+The pre-filtering step uses heuristic signal detection to reduce what gets sent to the LLM. This keeps cost under $0.001 per extraction while preserving extraction quality.
 
 ---
 
-## How It Works
+## Session auto-discovery
 
-### Signal Detection
+When you run any command without specifying a file, cc-intel:
 
-Messages are scored by detecting four signal categories with weighted importance:
+1. Finds the git root of your current directory
+2. Looks in `~/.claude/projects/<project>/` for session files
+3. Uses the most recently modified one
 
-| Category | Weight | What it catches |
-|----------|--------|-----------------|
-| Decision | 2 | "we decided to", "will use", "switched to" |
-| Constraint | 2 | "must not", "required", "not allowed" |
-| Artifact | 3 | File paths, API endpoints, code blocks |
-| Todo | 1.5 | "TODO:", "FIXME:", "next step" |
+You can also pass a file explicitly:
 
-### Session Segmentation
+```bash
+cc-intel snapshot path/to/session.jsonl
+cc-intel snapshot --json -o snapshot.json
+```
 
-Sessions are divided into four phases based on message position:
-
-| Phase | Range | Purpose |
-|-------|-------|---------|
-| Goal | 0-15% | Initial requirements and objectives |
-| Exploration | 15-50% | Research and design discussion |
-| Implementation | 50-85% | Code writing and iteration |
-| WrapUp | 85-100% | Summary and next steps |
-
-### Deduplication
-
-New entries are compared against existing MEMORY.md content using Dice coefficient similarity on character bigrams. Entries above the 0.85 similarity threshold are merged, keeping the most recent version.
+Supported formats: native Claude Code JSONL (auto-detected), simple JSONL (`{"role":"human","content":"..."}` per line), and markdown (`Human:` / `Assistant:` prefixes).
 
 ---
 
-## MEMORY.md Budget
+## MEMORY.md budget
 
-MEMORY.md is managed with strict line limits to stay within Claude's system prompt constraints:
+MEMORY.md has strict line limits to stay useful inside Claude's system prompt:
 
-| Section | Default Limit |
-|---------|---------------|
+| Section | Default limit |
+|---------|--------------|
 | Pinned Essentials | 80 lines |
 | Index Links | 40 lines |
 | Recent Decisions | 60 lines |
 | **Total** | **200 lines** |
 
-When a section exceeds its limit, overflow content is written to topic files and linked from the Index section.
+When a section overflows, excess content moves to a topic file and a link replaces it in MEMORY.md.
 
 ---
 
@@ -243,8 +231,8 @@ Create `.cc-intelrc.json` in your project root or home directory:
 
 Environment variable overrides:
 
-- `CC_INTEL_LOG_LEVEL` — `debug`, `info`, `warn`, `error`
-- `CC_INTEL_MAX_CONTEXT` — Max context token count
+- `CC_INTEL_LOG_LEVEL` -- `debug`, `info`, `warn`, `error`
+- `CC_INTEL_MAX_CONTEXT` -- max context token count
 
 ---
 
@@ -280,6 +268,15 @@ npm run test
 npm run lint
 npm run typecheck
 ```
+
+---
+
+## Privacy and security
+
+- **BYOK model** -- you provide your own Anthropic API key. cc-intel never stores, logs, or transmits it anywhere except the Anthropic API
+- **Local processing** -- session parsing, scoring, deduplication, and memory management all run locally on your machine
+- **No telemetry** -- cc-intel sends nothing home. No analytics, no tracking, no phone calls
+- **Open source** -- every line of code is auditable. MIT licensed
 
 ## License
 

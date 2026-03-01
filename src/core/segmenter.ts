@@ -46,7 +46,6 @@ export function segmentSession(
     result[phase].push(scored);
   }
 
-  // Sort each phase by importance score descending
   for (const phase of Object.values(SessionPhase)) {
     result[phase].sort((a, b) => b.importanceScore - a.importanceScore);
   }

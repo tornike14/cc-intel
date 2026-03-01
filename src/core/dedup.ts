@@ -5,10 +5,7 @@ export interface DedupEntry {
   timestamp?: string;
 }
 
-/**
- * Dice coefficient on character bigrams.
- * Returns similarity between 0 and 1.
- */
+/** Dice coefficient on character bigrams. */
 export function computeSimilarity(a: string, b: string): number {
   const normA = normalizeWhitespace(a).toLowerCase();
   const normB = normalizeWhitespace(b).toLowerCase();
@@ -48,13 +45,7 @@ function sumValues(map: Map<string, number>): number {
   return sum;
 }
 
-/**
- * Check if one entry is a truncated prefix of another.
- * Handles dedup across truncation limit changes (e.g., 150→500 chars).
- *
- * Strips leading bullet markers (`- `) and trailing ellipsis (`...`) before
- * comparing, so `- Decided to use React...` matches `- Decided to use React for SSR`.
- */
+/** Check if one entry is a truncated prefix of another. */
 export function isPrefixMatch(a: string, b: string): boolean {
   const normA = normalizeForPrefix(a);
   const normB = normalizeForPrefix(b);
@@ -74,13 +65,7 @@ function normalizeForPrefix(text: string): string {
     .replace(/\.{3}$/, '');
 }
 
-/**
- * Deduplicate entries. Entries with similarity >= threshold are grouped,
- * and the most recent (by timestamp or last in array) is kept.
- *
- * Also detects prefix matches (one entry is a truncated prefix of another)
- * and keeps the longer entry to preserve context.
- */
+/** Deduplicate entries by similarity and prefix matching, keeping the most recent. */
 export function deduplicate(entries: DedupEntry[], threshold = 0.85): DedupEntry[] {
   if (entries.length <= 1) return [...entries];
 
@@ -99,11 +84,9 @@ export function deduplicate(entries: DedupEntry[], threshold = 0.85): DedupEntry
       const similarity = computeSimilarity(best.text, entries[j]!.text);
       if (similarity >= threshold) {
         consumed.add(j);
-        // Keep the more recent one (later in array, or by timestamp)
         best = pickMoreRecent(best, entries[j]!);
       } else if (isPrefixMatch(best.text, entries[j]!.text)) {
         consumed.add(j);
-        // Keep the longer entry (more context preserved)
         best = best.text.length >= entries[j]!.text.length ? best : entries[j]!;
       }
     }
@@ -118,6 +101,5 @@ function pickMoreRecent(a: DedupEntry, b: DedupEntry): DedupEntry {
   if (a.timestamp && b.timestamp) {
     return a.timestamp >= b.timestamp ? a : b;
   }
-  // If no timestamps, prefer the later one (b) since it appeared later in the array
   return b;
 }

@@ -16,7 +16,6 @@ export function detectFormat(input: string): 'jsonl' | 'claude-code' | 'markdown
   const firstLine = input.trimStart().split('\n')[0]?.trim() ?? '';
   if (!firstLine.startsWith('{')) return 'markdown';
 
-  // Check if this is native Claude Code JSONL (has a "type" field)
   try {
     const parsed = JSON.parse(firstLine) as Record<string, unknown>;
     if (
@@ -34,7 +33,6 @@ export function detectFormat(input: string): 'jsonl' | 'claude-code' | 'markdown
   return 'jsonl';
 }
 
-/** Parse native Claude Code session JSONL (undocumented internal format). */
 export function parseClaudeCodeSession(input: string): SessionData {
   const messages: SessionMessage[] = [];
   const lines = input.split('\n').filter((l) => l.trim().length > 0);
@@ -53,7 +51,6 @@ export function parseClaudeCodeSession(input: string): SessionData {
         typeof parsed['timestamp'] === 'string' ? parsed['timestamp'] : undefined;
 
       if (lineType === 'user') {
-        // User messages: content is a string for text, array for tool_results
         if (typeof message['content'] !== 'string') continue;
         messages.push({
           role: 'human',
@@ -61,7 +58,6 @@ export function parseClaudeCodeSession(input: string): SessionData {
           timestamp,
         });
       } else {
-        // Assistant messages: content is an array of content blocks
         const contentBlocks = message['content'];
         if (!Array.isArray(contentBlocks)) continue;
 
@@ -77,7 +73,6 @@ export function parseClaudeCodeSession(input: string): SessionData {
           }
         }
 
-        // Skip assistant messages with no text content (tool-use only)
         if (textParts.length === 0) continue;
 
         messages.push({
@@ -149,7 +144,6 @@ export function parseMarkdownSession(input: string): SessionData {
     const roleMatch = line.match(rolePattern);
 
     if (roleMatch) {
-      // Flush previous message
       if (currentRole !== null && currentContent.length > 0) {
         messages.push({
           role: currentRole,
@@ -165,7 +159,6 @@ export function parseMarkdownSession(input: string): SessionData {
     }
   }
 
-  // Flush last message
   if (currentRole !== null && currentContent.length > 0) {
     messages.push({
       role: currentRole,

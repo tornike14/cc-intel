@@ -37,7 +37,6 @@ export function createProjectsCommand(config?: CcIntelConfig): Command {
         return;
       }
 
-      // Non-interactive JSON mode
       if (options.json) {
         const output = projects.map((p) => ({
           name: p.name,
@@ -50,10 +49,8 @@ export function createProjectsCommand(config?: CcIntelConfig): Command {
         return;
       }
 
-      // Interactive mode — dynamic import to avoid loading inquirer in CI
       const { default: select } = await import('@inquirer/select');
 
-      // Step 1: Select a project
       const selectedProject = await select<ProjectInfo>({
         message: 'Select a project:',
         choices: projects.map((p) => ({
@@ -62,7 +59,6 @@ export function createProjectsCommand(config?: CcIntelConfig): Command {
         })),
       });
 
-      // Step 2: Select a command
       const selectedCommand = await select<string>({
         message: 'Which command?',
         choices: [
@@ -72,7 +68,6 @@ export function createProjectsCommand(config?: CcIntelConfig): Command {
         ],
       });
 
-      // Step 3: Discover the latest session and run
       const sessionPath = await discoverLatestSessionInProject(selectedProject.projectDir);
       if (!sessionPath) {
         process.stderr.write(`No session files found in ${selectedProject.projectDir}\n`);

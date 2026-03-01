@@ -25,3 +25,10 @@ export class ParseError extends Error {
     this.name = 'ParseError';
   }
 }
+
+export class LlmExtractionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'LlmExtractionError';
+  }
+}

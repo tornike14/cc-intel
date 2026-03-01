@@ -8,17 +8,14 @@ const SECTION_TITLES: Record<SnapshotSection, string> = {
   [SnapshotSection.OpenTasks]: 'Open Tasks',
 };
 
-/** Truncate text at a sentence boundary, falling back to word boundary */
 function truncateEntry(text: string, maxLen: number): string {
   const firstLine = text.split('\n')[0] ?? text;
   if (firstLine.length <= maxLen) return firstLine;
 
-  // Try to cut at sentence boundary (. ! ?) followed by space or end
   const candidate = firstLine.substring(0, maxLen);
   const sentenceEnd = candidate.search(/[.!?](?:\s|$)/);
   if (sentenceEnd > 30) return firstLine.substring(0, sentenceEnd + 1);
 
-  // Fall back to word boundary
   const lastSpace = candidate.lastIndexOf(' ');
   if (lastSpace > 30) return firstLine.substring(0, lastSpace) + '...';
 
@@ -34,7 +31,8 @@ export function formatSnapshotAsMarkdown(snapshot: Snapshot): string {
 
   for (const section of Object.values(SnapshotSection)) {
     const entries = snapshot.sections[section];
-    parts.push(`  ## ${SECTION_TITLES[section]}`);
+    const count = entries.length;
+    parts.push(`  ## ${SECTION_TITLES[section]} (${count})`);
     parts.push('');
 
     if (entries.length === 0) {
@@ -48,8 +46,9 @@ export function formatSnapshotAsMarkdown(snapshot: Snapshot): string {
   }
 
   parts.push('  ' + '-'.repeat(50));
+  const totalEntries = Object.values(snapshot.sections).reduce((sum, s) => sum + s.length, 0);
   parts.push(
-    `  Extracted at ${snapshot.metadata.extractedAt} from ${snapshot.metadata.messageCount} messages`,
+    `  Extracted ${totalEntries} entries from ${snapshot.metadata.messageCount} messages`,
   );
   parts.push('');
 

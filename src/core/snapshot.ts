@@ -12,11 +12,7 @@ import {
 import type { SegmentedSession } from './segmenter.js';
 import { isBoilerplate, extractSubstantiveLine } from '../utils/text.js';
 
-/**
- * Find the line in content that contains the most signal matches.
- * This extracts the actual decision/constraint/artifact text rather than
- * a random first line that might be conversational filler.
- */
+/** Find the line in content that contains the most signal matches. */
 function extractSignalLine(content: string, signals: SignalMatch[]): string {
   if (signals.length === 0) return extractSubstantiveLine(content);
 
@@ -67,11 +63,6 @@ function extractByCategory(
   return entries;
 }
 
-/**
- * Check whether a scored message should be excluded from snapshot extraction.
- * Excludes human messages (questions/commands, not knowledge), boilerplate,
- * and messages below the minimum score threshold.
- */
 function shouldExclude(m: ScoredMessage, minScore: number): boolean {
   if (m.role === 'human') return true;
   if (m.content.trim().length === 0) return true;
@@ -87,8 +78,6 @@ export function extractSnapshot(
   const max = config.maxItemsPerSection;
   const minScore = config.minScoreThreshold;
 
-  // Filter noise from extraction: human messages, boilerplate, low-score messages.
-  // Keep original segmented for metadata (message counts stay accurate).
   const filtered: SegmentedSession = {
     [SessionPhase.Goal]: segmented[SessionPhase.Goal].filter((m) => !shouldExclude(m, minScore)),
     [SessionPhase.Exploration]: segmented[SessionPhase.Exploration].filter(
@@ -102,10 +91,8 @@ export function extractSnapshot(
     ),
   };
 
-  // Track extracted texts across sections to prevent duplication
   const usedTexts = new Set<string>();
 
-  // Project goal from Goal phase — highest scored messages
   const projectGoal: SnapshotEntry[] = [];
   for (const m of filtered[SessionPhase.Goal]) {
     if (projectGoal.length >= max) break;
@@ -115,7 +102,6 @@ export function extractSnapshot(
     projectGoal.push(entry);
   }
 
-  // Key decisions — from all phases, filter by decision signals
   const allMessages = [
     ...filtered[SessionPhase.Goal],
     ...filtered[SessionPhase.Exploration],
@@ -125,7 +111,6 @@ export function extractSnapshot(
 
   const keyDecisions = extractByCategory(allMessages, 'decision' as SignalCategory, max, usedTexts);
 
-  // Constraints — from all phases
   const constraints = extractByCategory(
     allMessages,
     'constraint' as SignalCategory,
@@ -133,7 +118,6 @@ export function extractSnapshot(
     usedTexts,
   );
 
-  // Implementation artifacts — primarily from Implementation phase
   const implMessages = [
     ...filtered[SessionPhase.Implementation],
     ...filtered[SessionPhase.Exploration],
@@ -146,7 +130,6 @@ export function extractSnapshot(
     usedTexts,
   );
 
-  // Open tasks — from WrapUp and all phases
   const wrapUpFirst = [
     ...filtered[SessionPhase.WrapUp],
     ...filtered[SessionPhase.Implementation],

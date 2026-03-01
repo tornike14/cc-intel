@@ -65,19 +65,29 @@ const segmented = segmentSession(session.messages);
 
 ## Snapshot Extraction
 
-### `extractSnapshot(segmented, config?)`
+### `llmExtractSnapshot(messages, apiKey)`
 
-Extract a structured snapshot from segmented messages.
+Extract a structured snapshot using Claude Haiku. This is the primary extraction method used by the CLI.
 
 ```typescript
-import { extractSnapshot } from 'cc-intel';
+import { llmExtractSnapshot } from 'cc-intel';
 
-const snapshot = extractSnapshot(segmented);
+const snapshot = await llmExtractSnapshot(session.messages, process.env.ANTHROPIC_API_KEY!);
 // snapshot.sections.projectGoal: SnapshotEntry[]
 // snapshot.sections.keyDecisions: SnapshotEntry[]
 // snapshot.sections.constraints: SnapshotEntry[]
 // snapshot.sections.implementationArtifacts: SnapshotEntry[]
 // snapshot.sections.openTasks: SnapshotEntry[]
+```
+
+### `extractSnapshot(segmented, config?)`
+
+Extract a snapshot using heuristic signal detection (no API key needed). Used internally by the `projects` command.
+
+```typescript
+import { extractSnapshot } from 'cc-intel';
+
+const snapshot = extractSnapshot(segmented);
 ```
 
 ## Deduplication

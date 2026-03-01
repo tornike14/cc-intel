@@ -1,14 +1,6 @@
 import type { MemoryDocument, MemorySectionData } from '../models/index.js';
 
-/**
- * Convert a markdown header to a camelCase section key.
- *
- * Examples:
- *   "## Pinned Essentials" → "pinnedEssentials"
- *   "## User Preferences"  → "userPreferences"
- *   "## Project Structure"  → "projectStructure"
- *   "## CI/CD Pipeline"    → "ci/cdPipeline"
- */
+/** Convert a markdown header to a camelCase section key. */
 export function toSectionKey(header: string): string {
   const words = header
     .replace(/^#+\s*/, '')
@@ -41,19 +33,16 @@ export function parseMemoryDocument(content: string): MemoryDocument {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // Detect H1 title (only before any ## section)
     if (!seenFirstSection && /^#\s+/.test(trimmed) && !trimmed.startsWith('##')) {
       title = trimmed;
       continue;
     }
 
-    // Detect H2 section header
     if (trimmed.startsWith('## ')) {
       seenFirstSection = true;
       const key = toSectionKey(trimmed);
 
       if (sections[key]) {
-        // Duplicate header normalizing to same key — append to existing
         currentKey = key;
       } else {
         sections[key] = emptySectionData(trimmed);
@@ -63,19 +52,16 @@ export function parseMemoryDocument(content: string): MemoryDocument {
       continue;
     }
 
-    // Lines before first section go into preamble (if title was found)
     if (!seenFirstSection && title !== undefined) {
       preamble.push(line);
       continue;
     }
 
-    // Content lines within a section
     if (currentKey !== null) {
       sections[currentKey]!.lines.push(line);
     }
   }
 
-  // Trim leading/trailing empty lines from each section and compute lineCount
   for (const key of sectionOrder) {
     const data = sections[key]!;
     while (data.lines.length > 0 && data.lines[0]!.trim() === '') {
@@ -87,7 +73,6 @@ export function parseMemoryDocument(content: string): MemoryDocument {
     data.lineCount = data.lines.length;
   }
 
-  // Trim preamble
   while (preamble.length > 0 && preamble[0]!.trim() === '') {
     preamble.shift();
   }
