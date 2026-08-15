@@ -13,6 +13,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18-brightgreen.svg)](https://nodejs.org)
 
+> **Archived, August 2026.** Claude Code ships its own memory now, writing facts to MEMORY.md as a session runs. I've stopped maintaining this. The code stays up for anyone who wants to read it.
+
 **Your Claude Code sessions are losing memory. cc-intel fixes that.**
 
 You spend an hour making architectural decisions with Claude Code. Then the context window fills up, compaction kicks in, and those decisions vanish. Next session? Claude starts from scratch, contradicts itself, and you repeat the same conversations.
